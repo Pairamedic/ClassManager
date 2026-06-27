@@ -23,7 +23,7 @@ function HeaderButton({ onClick, children }) {
   )
 }
 
-export default function ACLSSimulator() {
+export default function ACLSSimulator({ remoteRoom, onExitMode }) {
   const { state, dispatch } = useSimulator()
   const [showPrint, setShowPrint] = useState(false)
   const [showAlgos, setShowAlgos] = useState(false)
@@ -49,9 +49,18 @@ export default function ACLSSimulator() {
           <HeaderButton onClick={() => setShowSessions(true)}>Sessions</HeaderButton>
         </div>
 
-        {/* Center: theme toggle + scenario */}
+        {/* Center: theme toggle + remote code + scenario */}
         <div className="flex items-center gap-3 min-w-0">
           <ThemeToggle />
+          {remoteRoom && (
+            <button
+              onClick={onExitMode}
+              title="Remote pairing code — tap to change mode"
+              className="px-2 min-h-[32px] rounded-lg border border-ecg-blue/60 bg-ecg-blue/10 text-ecg-blue font-mono text-[11px] font-bold tracking-widest"
+            >
+              📱 {remoteRoom}
+            </button>
+          )}
           {state.scenarioName && (
             <span className="text-xs text-ecg-gray font-mono tracking-wide truncate hidden sm:inline">
               {state.scenarioName}

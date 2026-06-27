@@ -1,10 +1,35 @@
+import { useState } from 'react'
 import { SimulatorProvider } from './context/SimulatorContext'
 import ACLSSimulator from './components/ACLSSimulator'
+import StartScreen from './components/StartScreen'
+import RemoteControl from './components/RemoteControl'
+import { useRemoteSync } from './hooks/useRemoteSync'
+import { readInitial, persist, clearMode } from './utils/remoteSession'
+
+function MonitorHost({ room, onExit }) {
+  useRemoteSync(room)
+  return <ACLSSimulator remoteRoom={room} onExitMode={onExit} />
+}
 
 export default function App() {
+  const [{ mode, room }, setSession] = useState(() => readInitial())
+
+  function choose(nextMode, nextRoom) {
+    persist(nextMode, nextRoom)
+    setSession({ mode: nextMode, room: nextRoom || null })
+  }
+  function exit() {
+    clearMode()
+    setSession(s => ({ mode: null, room: s.room }))
+  }
+
+  if (!mode) return <StartScreen onChoose={choose} initialRoom={room} />
+
+  if (mode === 'remote') return <RemoteControl room={room} onExit={exit} />
+
   return (
     <SimulatorProvider>
-      <ACLSSimulator />
+      <MonitorHost room={room} onExit={exit} />
     </SimulatorProvider>
   )
 }
