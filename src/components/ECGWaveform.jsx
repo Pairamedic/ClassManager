@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import { useECGCanvas } from '../hooks/useECGCanvas'
 
@@ -6,26 +6,26 @@ export default function ECGWaveform() {
   const { state } = useSimulator()
   const containerRef = useRef(null)
   const canvasRef    = useRef(null)
+  const [canvasReady, setCanvasReady] = useState(false)
 
-  // Size canvas to container on mount and resize
+  // Fit canvas to container; signal hook once we have real dimensions
   useEffect(() => {
     const el = containerRef.current
     const canvas = canvasRef.current
     if (!el || !canvas) return
 
     function resize() {
-      const dpr = window.devicePixelRatio || 1
-      const w   = el.offsetWidth
-      const h   = el.offsetHeight
-      canvas.width  = w * dpr
-      canvas.height = h * dpr
-      canvas.style.width  = w + 'px'
-      canvas.style.height = h + 'px'
-      const ctx = canvas.getContext('2d')
-      ctx.scale(dpr, dpr)
+      const w = el.offsetWidth
+      const h = el.offsetHeight
+      if (!w || !h) return
+      canvas.width  = w
+      canvas.height = h
+      setCanvasReady(r => !r)  // toggle to re-trigger hook
     }
 
+    // Fire once synchronously in case layout is already known
     resize()
+
     const ro = new ResizeObserver(resize)
     ro.observe(el)
     return () => ro.disconnect()
@@ -37,6 +37,8 @@ export default function ECGWaveform() {
     pacerOutput:      state.pacer.output,
     captureThreshold: state.pacer.captureThreshold,
     isRunning:        state.isRunning,
+    // canvasReady included so hook restarts when canvas is resized
+    _canvasReady:     canvasReady,
   })
 
   return (
@@ -48,7 +50,7 @@ export default function ECGWaveform() {
       <canvas
         ref={canvasRef}
         className="absolute inset-0"
-        style={{ imageRendering: 'pixelated' }}
+        style={{ width: '100%', height: '100%' }}
       />
     </div>
   )

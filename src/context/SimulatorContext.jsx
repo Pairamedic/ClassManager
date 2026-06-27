@@ -92,6 +92,11 @@ function reducer(state, action) {
       return { ...state, pacer: { ...state.pacer, output } }
     }
 
+    case 'SET_CAPTURE_THRESHOLD': {
+      const captureThreshold = Math.max(0, Math.min(200, Number(action.threshold)))
+      return { ...state, pacer: { ...state.pacer, captureThreshold } }
+    }
+
     case 'LOG_MED':
       return {
         ...state,
@@ -106,9 +111,6 @@ function reducer(state, action) {
 
     case 'STOP_CODE':
       return { ...state, codeStartTime: null }
-
-    case 'RESET_CODE':
-      return { ...state, codeStartTime: state.codeStartTime ? Date.now() : null }
 
     case 'LOAD_SCENARIO':
       return {
