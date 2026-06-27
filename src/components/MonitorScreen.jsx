@@ -46,6 +46,16 @@ export default function MonitorScreen() {
         </div>
       </div>
 
+      {/* ROSC / post-arrest banner */}
+      {state.rosc && (
+        <div className="mx-3 mt-1 px-3 py-1.5 rounded border border-ecg-green bg-ecg-green/10 shrink-0">
+          <span className="text-[11px] font-bold text-ecg-green uppercase tracking-widest">✔ ROSC</span>
+          <span className="text-[10px] text-ecg-gray ml-2">
+            Begin post-arrest care — 12-lead, SpO₂ 92–98%, avoid hypotension, targeted temp.
+          </span>
+        </div>
+      )}
+
       {/* ECG Canvas */}
       <ECGWaveform />
 

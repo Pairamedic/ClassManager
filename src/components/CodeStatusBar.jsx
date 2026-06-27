@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
+import { RHYTHMS } from '../data/rhythms'
 import { playMetronomeClick, playAlertBeep, resumeAudio } from '../utils/audio'
 
 const CYCLE_SEC = 120          // AHA 2-minute CPR cycle
@@ -73,6 +74,16 @@ export default function CodeStatusBar() {
   const amioText = amioCount === 0 ? 'Amio: 300 mg next'
     : amioCount === 1 ? 'Amio: 150 mg next'
     : 'Amio: max given'
+
+  // ── ETCO2 CPR-quality / ROSC cue (during arrest) ──
+  const isArrest = RHYTHMS[state.currentRhythm]?.pulse === false
+  const etco2 = state.vitals.etco2
+  let etco2Cue = null
+  if (isArrest && cpr.active) {
+    if (etco2 < 10) etco2Cue = { text: 'ETCO₂ low — improve CPR', cls: 'text-ecg-red border-ecg-red' }
+    else if (etco2 >= 35) etco2Cue = { text: 'ETCO₂ rising — check pulse', cls: 'text-ecg-green border-ecg-green' }
+    else etco2Cue = { text: `ETCO₂ ${etco2}`, cls: 'text-ecg-gray border-ecg-border' }
+  }
 
   const checkDue = cpr.active && cycleRemaining <= 0
 
@@ -151,6 +162,11 @@ export default function CodeStatusBar() {
           <span className="text-[8px] uppercase tracking-widest leading-none opacity-70">Amiodarone</span>
           <span className="text-[11px] font-bold leading-tight">{amioText.replace('Amio: ', '')}</span>
         </div>
+        {etco2Cue && (
+          <div className={`flex items-center justify-center px-3 min-h-[44px] rounded border font-mono text-[11px] font-bold text-center leading-tight ${etco2Cue.cls}`}>
+            {etco2Cue.text}
+          </div>
+        )}
       </div>
     </div>
   )

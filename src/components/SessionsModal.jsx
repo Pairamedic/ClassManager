@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import { saveSession, loadSessions, deleteSession, usingCloud } from '../utils/sessionStore'
 import { causeLabel } from '../data/reversibleCauses'
+import { computeMetrics, fmtSec } from '../utils/metrics'
 
 function fmtClock(sec) {
   const s = Math.max(0, Math.floor(sec))
@@ -22,9 +23,11 @@ function buildPayload(state, studentName, notes) {
     notes: notes.trim(),
     scenarioName: state.scenarioName || null,
     finalRhythm: state.currentRhythm,
+    rosc: state.rosc,
     shocks: state.defib.shocksDelivered,
     cprCycles: state.cpr.cycleCount,
     durationSec,
+    metrics: computeMetrics(state),
     vitals: { ...state.vitals },
     medications: [...state.medications],
     rhythmHistory: [...state.rhythmHistory],
@@ -254,9 +257,17 @@ function SessionDetail({ s, onBack, onDelete }) {
       <div>
         <Field label="Scenario">{s.scenarioName || '—'}</Field>
         <Field label="Final rhythm">{s.finalRhythm}</Field>
+        <Field label="ROSC">{s.rosc ? 'Yes' : 'No'}</Field>
         <Field label="Duration">{fmtClock(s.durationSec || 0)}</Field>
         <Field label="Shocks">{s.shocks ?? 0}</Field>
         <Field label="CPR cycles">{s.cprCycles ?? 0}</Field>
+        {s.metrics && <>
+          <Field label="Time to CPR">{fmtSec(s.metrics.timeToCompression)}</Field>
+          <Field label="Time to 1st shock">{fmtSec(s.metrics.timeToShock)}</Field>
+          <Field label="Time to 1st epi">{fmtSec(s.metrics.timeToEpi)}</Field>
+          <Field label="CPR fraction">{s.metrics.cprFractionPct != null ? s.metrics.cprFractionPct + '%' : '—'}</Field>
+          <Field label="Interruptions">{s.metrics.interruptions ?? 0}</Field>
+        </>}
         <Field label="Causes">
           {s.reversibleCauses?.length ? s.reversibleCauses.map(causeLabel).join(', ') : '—'}
         </Field>

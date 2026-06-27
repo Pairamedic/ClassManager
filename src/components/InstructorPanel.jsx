@@ -213,6 +213,25 @@ export default function InstructorPanel() {
             </div>
           </section>
 
+          {/* CODE OUTCOME */}
+          <section>
+            <SectionLabel>Code Outcome</SectionLabel>
+            <button
+              onClick={() => dispatch({ type: 'DECLARE_ROSC' })}
+              disabled={state.rosc}
+              className={`w-full min-h-[44px] rounded border-2 font-bold text-xs uppercase tracking-widest transition-colors ${
+                state.rosc
+                  ? 'border-ecg-green text-ecg-green bg-ecg-green/10 cursor-default'
+                  : 'border-ecg-green text-ecg-green bg-surface2 hover:bg-ecg-green hover:text-black'
+              }`}
+            >
+              {state.rosc ? '✔ ROSC Declared' : 'Declare ROSC'}
+            </button>
+            <p className="text-[9px] text-ecg-gray mt-1">
+              Restores a perfusing rhythm and post-arrest vitals; prompts post-arrest care.
+            </p>
+          </section>
+
           {/* REVERSIBLE CAUSES (H's & T's) */}
           <section>
             <SectionLabel>Reversible Causes (H’s &amp; T’s)</SectionLabel>

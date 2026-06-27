@@ -1,4 +1,5 @@
 import { createContext, useContext, useReducer } from 'react'
+import { RHYTHMS } from '../data/rhythms'
 
 const Ctx = createContext(null)
 
@@ -35,6 +36,8 @@ export const initialState = {
 
   reversibleCauses: [], // array of cause ids the instructor has flagged
 
+  rosc: false,          // return of spontaneous circulation achieved
+
   medications: [],
   rhythmHistory: [],
   eventLog: [],         // unified timeline: { type, label, detail, time }
@@ -49,15 +52,18 @@ function logEvent(state, entry) {
 
 function reducer(state, action) {
   switch (action.type) {
-    case 'SET_RHYTHM':
+    case 'SET_RHYTHM': {
+      const reArrest = RHYTHMS[action.rhythm]?.pulse === false
       return {
         ...state,
         currentRhythm: action.rhythm,
+        rosc: reArrest ? false : state.rosc,
         rhythmHistory: [...state.rhythmHistory, { rhythm: action.rhythm, time: Date.now() }],
         eventLog: action.silent
           ? state.eventLog
           : logEvent(state, { type: 'rhythm', label: 'Rhythm', detail: action.rhythm }),
       }
+    }
 
     case 'SET_RUNNING':
       return { ...state, isRunning: action.value }
@@ -156,6 +162,23 @@ function reducer(state, action) {
     case 'TOGGLE_METRONOME':
       return { ...state, metronomeOn: !state.metronomeOn }
 
+    case 'DECLARE_ROSC': {
+      const perfusing = RHYTHMS[state.currentRhythm]?.pulse ? state.currentRhythm : 'NSR'
+      const rhythmChanged = perfusing !== state.currentRhythm
+      return {
+        ...state,
+        rosc: true,
+        currentRhythm: perfusing,
+        cpr: { ...state.cpr, active: false },
+        // restore a modest post-arrest perfusing state
+        vitals: { ...state.vitals, hr: 88, sbp: 104, dbp: 62, spo2: 93, etco2: 38 },
+        rhythmHistory: rhythmChanged
+          ? [...state.rhythmHistory, { rhythm: perfusing, time: Date.now() }]
+          : state.rhythmHistory,
+        eventLog: logEvent(state, { type: 'rosc', label: 'ROSC achieved', detail: 'begin post-arrest care' }),
+      }
+    }
+
     // ── Reversible causes (H's & T's) ────────────────────
     case 'TOGGLE_REVERSIBLE_CAUSE': {
       const has = state.reversibleCauses.includes(action.id)
@@ -199,6 +222,7 @@ function reducer(state, action) {
         pacer: { ...initialState.pacer, captureThreshold: state.pacer.captureThreshold },
         cpr: { ...initialState.cpr },
         reversibleCauses: [],
+        rosc: false,
         medications: [],
         rhythmHistory: [{ rhythm: state.currentRhythm, time: Date.now() }],
         eventLog: [],
@@ -216,6 +240,7 @@ function reducer(state, action) {
         pacer: { ...initialState.pacer, captureThreshold: action.scenario.captureThreshold ?? 60 },
         cpr: { ...initialState.cpr },
         reversibleCauses: action.scenario.reversibleCauses ?? [],
+        rosc: false,
         medications: [],
         codeStartTime: null,
         rhythmHistory: [{ rhythm: action.scenario.rhythm, time: Date.now() }],

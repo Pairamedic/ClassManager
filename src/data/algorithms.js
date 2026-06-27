@@ -116,4 +116,112 @@ export const ALGORITHMS = [
       },
     ],
   },
+  {
+    id: 'postarrest',
+    title: 'Post-Arrest',
+    accent: 'green',
+    sections: [
+      {
+        heading: 'Immediately after ROSC',
+        steps: [
+          'Manage airway; titrate to SpO₂ 92–98%, avoid hyperoxia.',
+          'Ventilate ~10/min; target PaCO₂ 35–45 mmHg (ETCO₂ ~35–40).',
+          'Treat hypotension (SBP < 90): IV bolus, vasopressors as needed.',
+        ],
+      },
+      {
+        heading: 'Diagnose & treat',
+        steps: [
+          'Obtain 12-lead ECG — STEMI or high suspicion of ACS?',
+          'If yes → coronary reperfusion / cath lab.',
+          'Continue to treat reversible causes (H’s & T’s).',
+        ],
+      },
+      {
+        heading: 'Ongoing care',
+        steps: [
+          'Comatose: targeted temperature management (32–36 °C).',
+          'Continuous monitoring, glucose control, evaluate for cause.',
+          'Avoid hyperthermia; serial neuro exams.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'acs',
+    title: 'ACS',
+    accent: 'amber',
+    sections: [
+      {
+        heading: 'Initial (suspected ACS)',
+        steps: [
+          'Monitor, IV access, oxygen if SpO₂ < 90%.',
+          'Obtain 12-lead ECG within 10 minutes.',
+          'Aspirin 162–325 mg chewed (if no contraindication).',
+          'Nitroglycerin and morphine for ongoing pain as indicated.',
+        ],
+      },
+      {
+        heading: 'STEMI (ST elevation)',
+        steps: [
+          'Activate cath lab — goal door-to-balloon ≤ 90 min.',
+          'If PCI unavailable in time, consider fibrinolytics (≤ 30 min).',
+          'Antithrombotics per protocol.',
+        ],
+      },
+      {
+        heading: 'NSTE-ACS',
+        steps: [
+          'Risk-stratify (troponin, serial ECG).',
+          'Antiplatelet / anticoagulant therapy.',
+          'Admit for invasive vs ischemia-guided strategy.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'opioid',
+    title: 'Opioid',
+    accent: 'blue',
+    sections: [
+      {
+        heading: 'Suspected opioid emergency',
+        steps: [
+          'Check responsiveness and breathing; call for help.',
+          'If not breathing normally but has pulse → support ventilation (BVM).',
+          'Naloxone 0.4–2 mg IV/IM/IN; repeat q2–3 min as needed.',
+        ],
+      },
+      {
+        heading: 'No pulse',
+        steps: [
+          'Begin CPR — follow the Cardiac Arrest algorithm.',
+          'Naloxone may be given but does not replace CPR/defibrillation.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'stroke',
+    title: 'Stroke',
+    accent: 'red',
+    sections: [
+      {
+        heading: 'Identify & assess',
+        steps: [
+          'Recognize signs (FAST); establish last-known-well time.',
+          'Monitor, IV access, check glucose, oxygen if needed.',
+          'Stroke screen + severity scale.',
+        ],
+      },
+      {
+        heading: 'Time-critical',
+        steps: [
+          'Activate stroke team; non-contrast CT/MRI ASAP.',
+          'Hemorrhage on imaging → consult neurosurgery; reverse anticoagulation.',
+          'Ischemic + eligible → fibrinolytics; consider thrombectomy.',
+        ],
+      },
+    ],
+  },
 ]

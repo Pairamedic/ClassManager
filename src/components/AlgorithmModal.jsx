@@ -5,6 +5,7 @@ const ACCENT = {
   red: 'text-ecg-red border-ecg-red',
   blue: 'text-ecg-blue border-ecg-blue',
   amber: 'text-ecg-amber border-ecg-amber',
+  green: 'text-ecg-green border-ecg-green',
 }
 
 export default function AlgorithmModal({ onClose }) {
@@ -22,12 +23,12 @@ export default function AlgorithmModal({ onClose }) {
           <button onClick={onClose} className="text-ecg-gray hover:text-ink text-2xl leading-none px-2">×</button>
         </div>
 
-        <div className="flex gap-1.5 p-3 shrink-0">
+        <div className="flex flex-wrap gap-1.5 p-3 shrink-0">
           {ALGORITHMS.map(a => (
             <button
               key={a.id}
               onClick={() => setActive(a.id)}
-              className={`flex-1 min-h-[44px] rounded-lg border text-xs font-bold uppercase tracking-wide transition-colors ${
+              className={`grow basis-[28%] min-h-[40px] px-2 rounded-lg border text-[11px] font-bold uppercase tracking-wide transition-colors ${
                 active === a.id
                   ? `bg-surface2 ${ACCENT[a.accent]}`
                   : 'border-ecg-border text-ecg-gray hover:text-ink'

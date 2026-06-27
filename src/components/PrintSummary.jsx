@@ -1,14 +1,16 @@
 import { useSimulator } from '../context/SimulatorContext'
 import { causeLabel } from '../data/reversibleCauses'
+import { computeMetrics, fmtSec } from '../utils/metrics'
 
 function fmt(ms, base) {
-  const s = Math.floor((ms - base) / 1000)
+  const s = Math.max(0, Math.floor((ms - base) / 1000))
   return `${String(Math.floor(s / 60)).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`
 }
 
 export default function PrintSummary({ onClose }) {
   const { state } = useSimulator()
   const now = Date.now()
+  const metrics = computeMetrics(state, now)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -53,6 +55,20 @@ export default function PrintSummary({ onClose }) {
               HR {state.vitals.hr} · BP {state.vitals.sbp}/{state.vitals.dbp} ·
               SpO₂ {state.vitals.spo2}% · EtCO₂ {state.vitals.etco2}
             </p>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <h2 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2 border-b pb-1">
+            Quality Metrics {state.rosc && <span className="text-green-600 normal-case">· ROSC achieved</span>}
+          </h2>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <Metric label="Time to CPR" value={fmtSec(metrics.timeToCompression)} />
+            <Metric label="Time to 1st shock" value={fmtSec(metrics.timeToShock)} />
+            <Metric label="Time to 1st epi" value={fmtSec(metrics.timeToEpi)} />
+            <Metric label="CPR fraction" value={metrics.cprFractionPct != null ? metrics.cprFractionPct + '%' : '—'} />
+            <Metric label="Interruptions" value={metrics.interruptions} />
+            <Metric label="Shocks" value={state.defib.shocksDelivered} />
           </div>
         </div>
 
@@ -109,6 +125,24 @@ export default function PrintSummary({ onClose }) {
           </div>
         )}
 
+        {state.eventLog?.length > 0 && (
+          <div className="mb-4">
+            <h2 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2 border-b pb-1">Event Timeline</h2>
+            <table className="w-full text-xs">
+              <tbody>
+                {state.eventLog.map((e, i) => (
+                  <tr key={i} className="border-b border-gray-100">
+                    <td className="py-0.5 pr-3 font-mono text-gray-500 w-16">
+                      {state.codeStartTime ? fmt(e.time, state.codeStartTime) : '—'}
+                    </td>
+                    <td className="py-0.5">{e.label}{e.detail ? ` · ${e.detail}` : ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         <div className="flex gap-2 pt-2 border-t print:hidden">
           <button
             onClick={() => window.print()}
@@ -124,6 +158,15 @@ export default function PrintSummary({ onClose }) {
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+function Metric({ label, value }) {
+  return (
+    <div className="border border-gray-200 rounded p-2">
+      <div className="text-[10px] uppercase tracking-wide text-gray-400">{label}</div>
+      <div className="text-sm font-bold font-mono">{value}</div>
     </div>
   )
 }
