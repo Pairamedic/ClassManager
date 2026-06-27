@@ -16,8 +16,8 @@ export default defineConfig({
         background_color: '#0d0f12',
         display: 'standalone',
         orientation: 'landscape',
-        scope: '/',
-        start_url: '/',
+        scope: '/rhythmgen/',
+        start_url: '/rhythmgen/',
         icons: [
           { src: 'icon.svg', type: 'image/svg+xml', sizes: 'any', purpose: 'any maskable' },
         ],
@@ -30,5 +30,5 @@ export default defineConfig({
       },
     }),
   ],
-  base: '/',
+  base: '/rhythmgen/',
 })
