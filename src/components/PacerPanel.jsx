@@ -4,9 +4,10 @@ import { resumeAudio } from '../utils/audio'
 
 export default function PacerPanel() {
   const { state, dispatch } = useSimulator()
-  const { pacer, currentRhythm } = state
+  const { pacer, currentRhythm, defib } = state
   const rhythm  = RHYTHMS[currentRhythm] || RHYTHMS.NSR
   const captured = pacer.active && pacer.output >= pacer.captureThreshold
+  const canPace  = defib.padsConnected || pacer.active  // PAM: pads required before pacing unlocks
 
   function step(field, action, delta) {
     resumeAudio()
@@ -70,17 +71,23 @@ export default function PacerPanel() {
         Threshold: {pacer.captureThreshold} mA
       </div>
 
-      {/* PACE button */}
+      {/* PACE button — requires pads connected (PAM Requirement 2) */}
       <button
-        onClick={() => { resumeAudio(); dispatch({ type: 'TOGGLE_PACER' }) }}
-        className={`w-full py-2.5 rounded font-bold text-sm tracking-widest uppercase border-2 transition-all active:scale-95 ${
+        onClick={() => { if (canPace) { resumeAudio(); dispatch({ type: 'TOGGLE_PACER' }) } }}
+        disabled={!canPace}
+        className={`w-full min-h-[44px] rounded font-bold text-sm tracking-widest uppercase border-2 transition-all active:scale-95 ${
           pacer.active
             ? 'bg-ecg-green text-black border-ecg-green'
-            : 'bg-surface2 text-ecg-green border-ecg-green hover:bg-ecg-green hover:text-black'
+            : canPace
+              ? 'bg-surface2 text-ecg-green border-ecg-green hover:bg-ecg-green hover:text-black'
+              : 'bg-surface2 text-ecg-border border-ecg-border cursor-not-allowed'
         }`}
       >
         {pacer.active ? '■ STOP PACING' : '▶ PACE'}
       </button>
+      {!canPace && (
+        <div className="text-[9px] text-ecg-amber font-mono text-center">Connect pads to pace</div>
+      )}
     </div>
   )
 }
