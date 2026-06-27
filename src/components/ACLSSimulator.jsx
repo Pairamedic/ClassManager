@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
+import { useRoom } from '../context/RoomContext'
 import MonitorScreen from './MonitorScreen'
 import DefibrillatorPanel from './DefibrillatorPanel'
 import PacerPanel from './PacerPanel'
@@ -10,13 +11,18 @@ import InstructorPanel from './InstructorPanel'
 import PrintSummary from './PrintSummary'
 import AlgorithmModal from './AlgorithmModal'
 import SessionsModal from './SessionsModal'
+import RoomModal from './RoomModal'
 import ThemeToggle from './ThemeToggle'
 
-function HeaderButton({ onClick, children }) {
+function HeaderButton({ onClick, children, highlight }) {
   return (
     <button
       onClick={onClick}
-      className="px-2.5 min-h-[40px] text-[11px] font-bold font-mono rounded-lg border border-ecg-border text-ecg-gray bg-surface2 hover:text-ink hover:border-ecg-gray active:scale-95 transition-all uppercase tracking-widest"
+      className={`px-2.5 min-h-[40px] text-[11px] font-bold font-mono rounded-lg border active:scale-95 transition-all uppercase tracking-widest ${
+        highlight
+          ? 'border-ecg-amber text-ecg-amber bg-ecg-amber/10 hover:bg-ecg-amber/20'
+          : 'border-ecg-border text-ecg-gray bg-surface2 hover:text-ink hover:border-ecg-gray'
+      }`}
     >
       {children}
     </button>
@@ -25,9 +31,14 @@ function HeaderButton({ onClick, children }) {
 
 export default function ACLSSimulator({ remoteRoom, onExitMode }) {
   const { state, dispatch } = useSimulator()
+  const { roomCode, role, connected } = useRoom()
   const [showPrint, setShowPrint] = useState(false)
   const [showAlgos, setShowAlgos] = useState(false)
   const [showSessions, setShowSessions] = useState(false)
+  const [showRoom, setShowRoom] = useState(false)
+
+  const isStudent = role === 'student'
+  const isInstructor = role === 'instructor'
 
   return (
     <div
@@ -35,22 +46,34 @@ export default function ACLSSimulator({ remoteRoom, onExitMode }) {
       style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
 
+      {/* ── STUDENT BANNER ── */}
+      {isStudent && (
+        <div className={`shrink-0 px-3 py-1 text-center text-[10px] font-mono font-bold uppercase tracking-widest ${
+          connected ? 'bg-ecg-green/15 text-ecg-green border-b border-ecg-green/30' : 'bg-ecg-amber/15 text-ecg-amber border-b border-ecg-amber/30'
+        }`}>
+          {connected ? `Room ${roomCode} · Instructor connected` : `Room ${roomCode} · Connecting…`}
+        </div>
+      )}
+
       {/* ── TOP HEADER ── */}
       <header className="flex items-center justify-between gap-2 px-3 py-1.5 bg-surface border-b border-ecg-border shrink-0">
         {/* Left cluster */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => dispatch({ type: 'TOGGLE_INSTRUCTOR' })}
-            className="flex items-center gap-2 px-3 min-h-[40px] rounded-lg bg-surface2 border border-ecg-border text-ecg-gray hover:text-ink hover:border-ecg-green active:scale-95 transition-all text-xs font-bold uppercase tracking-widest"
-          >
-            <span className="text-ecg-green">☰</span> Instructor
-          </button>
+          {/* Hide instructor button in student mode */}
+          {!isStudent && (
+            <button
+              onClick={() => dispatch({ type: 'TOGGLE_INSTRUCTOR' })}
+              className="flex items-center gap-2 px-3 min-h-[40px] rounded-lg bg-surface2 border border-ecg-border text-ecg-gray hover:text-ink hover:border-ecg-green active:scale-95 transition-all text-xs font-bold uppercase tracking-widest"
+            >
+              <span className="text-ecg-green">☰</span> Instructor
+            </button>
+          )}
           <HeaderButton onClick={() => setShowAlgos(true)}>Algorithms</HeaderButton>
           <HeaderButton onClick={() => setShowSessions(true)}>Sessions</HeaderButton>
         </div>
 
-        {/* Center: theme toggle + remote code + scenario */}
-        <div className="flex items-center gap-3 min-w-0">
+        {/* Center: theme toggle + scenario + room badge */}
+        <div className="flex items-center gap-2 min-w-0">
           <ThemeToggle />
           {remoteRoom && (
             <button
@@ -65,6 +88,26 @@ export default function ACLSSimulator({ remoteRoom, onExitMode }) {
             <span className="text-xs text-ecg-gray font-mono tracking-wide truncate hidden sm:inline">
               {state.scenarioName}
             </span>
+          )}
+          {/* Room badge — click to open room modal */}
+          {roomCode ? (
+            <button
+              onClick={() => setShowRoom(true)}
+              className={`px-2 py-1 rounded font-mono text-[10px] font-bold uppercase tracking-widest border transition-colors ${
+                isInstructor
+                  ? 'border-ecg-amber text-ecg-amber bg-ecg-amber/10'
+                  : 'border-ecg-green text-ecg-green bg-ecg-green/10'
+              }`}
+            >
+              {isInstructor ? '▲' : '▼'} {roomCode}
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowRoom(true)}
+              className="px-2 py-1 rounded font-mono text-[10px] font-bold uppercase tracking-widest border border-ecg-border text-ecg-gray bg-surface2 hover:border-ecg-gray transition-colors"
+            >
+              Room
+            </button>
           )}
         </div>
 
@@ -96,10 +139,11 @@ export default function ACLSSimulator({ remoteRoom, onExitMode }) {
 
       </div>
 
-      {state.instructorOpen && <InstructorPanel />}
-      {showPrint && <PrintSummary onClose={() => setShowPrint(false)} />}
-      {showAlgos && <AlgorithmModal onClose={() => setShowAlgos(false)} />}
-      {showSessions && <SessionsModal onClose={() => setShowSessions(false)} />}
+      {state.instructorOpen && !isStudent && <InstructorPanel />}
+      {showPrint    && <PrintSummary   onClose={() => setShowPrint(false)} />}
+      {showAlgos    && <AlgorithmModal onClose={() => setShowAlgos(false)} />}
+      {showSessions && <SessionsModal  onClose={() => setShowSessions(false)} />}
+      {showRoom     && <RoomModal      onClose={() => setShowRoom(false)} />}
 
     </div>
   )

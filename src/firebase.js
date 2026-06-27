@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app'
 import {
   getFirestore, collection, addDoc, getDocs,
-  deleteDoc, doc, query, orderBy,
+  deleteDoc, doc, query, orderBy, setDoc, getDoc, onSnapshot,
 } from 'firebase/firestore'
 import {
   getDatabase, ref as dbRef, onValue, set as dbSet,
@@ -57,6 +57,53 @@ export async function fbLoadScenarios() {
 
 export async function fbDeleteScenario(id) {
   await deleteDoc(doc(db(), 'acls_scenarios', id))
+}
+
+// ── Live rooms (instructor → student real-time sync) ──
+
+const ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+export function generateRoomCode() {
+  return Array.from({ length: 4 }, () => ROOM_CHARS[Math.floor(Math.random() * ROOM_CHARS.length)]).join('')
+}
+
+function serializeInstructorState(state) {
+  return {
+    currentRhythm:    state.currentRhythm,
+    vitals:           { ...state.vitals },
+    vitalsHidden:     state.vitalsHidden,
+    labelHidden:      state.labelHidden,
+    isRunning:        state.isRunning,
+    scenarioName:     state.scenarioName || null,
+    reversibleCauses: [...state.reversibleCauses],
+    captureThreshold: state.pacer.captureThreshold,
+    rosc:             state.rosc,
+    roscTime:         state.roscTime || null,
+    updatedAt:        Date.now(),
+  }
+}
+
+export async function createRoom(code, state) {
+  await setDoc(doc(db(), 'rooms', code), {
+    instructor: serializeInstructorState(state),
+    createdAt: Date.now(),
+  })
+}
+
+export async function roomExists(code) {
+  const snap = await getDoc(doc(db(), 'rooms', code))
+  return snap.exists()
+}
+
+export function subscribeRoom(code, onChange) {
+  return onSnapshot(doc(db(), 'rooms', code), snap => {
+    if (snap.exists()) onChange(snap.data().instructor)
+  })
+}
+
+export async function pushInstructorState(code, state) {
+  await setDoc(doc(db(), 'rooms', code), {
+    instructor: serializeInstructorState(state),
+  }, { merge: true })
 }
 
 // ── Student simulation sessions ──

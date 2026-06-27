@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { SimulatorProvider } from './context/SimulatorContext'
+import { RoomProvider } from './context/RoomContext'
 import ACLSSimulator from './components/ACLSSimulator'
+import RoomSync from './components/RoomSync'
 import StartScreen from './components/StartScreen'
 import RemoteControl from './components/RemoteControl'
 import { useRemoteSync } from './hooks/useRemoteSync'
@@ -8,7 +10,12 @@ import { readInitial, persist, clearMode } from './utils/remoteSession'
 
 function MonitorHost({ room, onExit }) {
   useRemoteSync(room)
-  return <ACLSSimulator remoteRoom={room} onExitMode={onExit} />
+  return (
+    <RoomProvider>
+      <RoomSync />
+      <ACLSSimulator remoteRoom={room} onExitMode={onExit} />
+    </RoomProvider>
+  )
 }
 
 export default function App() {
