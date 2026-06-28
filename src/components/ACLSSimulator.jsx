@@ -78,13 +78,12 @@ export default function ACLSSimulator({ remoteRoom, onExitMode }) {
         {/* Center: scenario label + room badge */}
         <div className="flex items-center gap-2 min-w-0">
           {remoteRoom && (
-            <button
-              onClick={onExitMode}
-              title="Remote pairing code — tap to change mode"
-              className="px-2 min-h-[32px] rounded-lg border border-ecg-blue/60 bg-ecg-blue/10 text-ecg-blue font-mono text-[11px] font-bold tracking-widest"
+            <div
+              title="Share this code with your phone to use it as a remote controller"
+              className="px-2 min-h-[32px] flex items-center rounded-lg border border-ecg-blue/60 bg-ecg-blue/10 text-ecg-blue font-mono text-[11px] font-bold tracking-widest select-all cursor-default"
             >
               📱 {remoteRoom}
-            </button>
+            </div>
           )}
           {state.scenarioName && (
             <span className="text-xs text-ecg-gray font-mono tracking-wide truncate hidden sm:inline">

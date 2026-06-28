@@ -47,7 +47,7 @@ function AppInner() {
 
   if (!mode) return (
     <ClassManagerHome
-      onLaunchSimulator={() => choose('monitor', null)}
+      onLaunchSimulator={(roomCode) => choose('monitor', roomCode)}
       onLaunchRemote={(code) => choose('remote', code)}
     />
   )

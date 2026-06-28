@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { signOut } from '../firebase'
+import { genRoom } from '../utils/remoteSession'
 
 export default function ClassManagerHome({ onLaunchSimulator, onLaunchRemote }) {
   const { user } = useAuth()
@@ -59,7 +60,7 @@ export default function ClassManagerHome({ onLaunchSimulator, onLaunchRemote }) 
 
           {/* Cardiac Monitor Simulator */}
           <button
-            onClick={onLaunchSimulator}
+            onClick={() => onLaunchSimulator(genRoom())}
             className="w-full rounded-2xl border-2 border-ecg-green bg-surface text-left px-5 py-4 hover:bg-ecg-green/10 active:scale-[0.99] transition-all"
           >
             <div className="flex items-center gap-3">
