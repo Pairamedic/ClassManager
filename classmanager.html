@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>Class Manager</title>
-  <link rel="icon" type="image/svg+xml" href="cm-icon.svg" />
-  <link rel="apple-touch-icon" sizes="180x180" href="cm-icon.svg" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icon.svg" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Class Manager" />
@@ -1260,7 +1260,16 @@ function lsSignIn(){
   });
 }
 
+// Fallback: if Firebase Auth never resolves, show login form after 8s
+const _authFallback = setTimeout(() => {
+  if ($('ls-checking').style.display !== 'none') {
+    $('ls-checking').style.display = 'none';
+    $('ls-login').style.display = 'flex';
+  }
+}, 8000);
+
 fbAuth.onAuthStateChanged(user=>{
+  clearTimeout(_authFallback);
   if(!user){
     unsubs.forEach(u=>u());
     $('ls-checking').style.display='none';
