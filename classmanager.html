@@ -187,9 +187,49 @@
 <body>
 
 <div id="loading-screen">
-  <div class="spin" style="width:28px;height:28px;border-width:3px"></div>
-  <div style="font-weight:700;font-size:16px">Class Manager</div>
-  <div style="font-size:13px;color:var(--muted)">Checking session…</div>
+  <!-- Checking state -->
+  <div id="ls-checking">
+    <div class="spin" style="width:28px;height:28px;border-width:3px"></div>
+    <div style="font-weight:700;font-size:16px">Class Manager</div>
+    <div style="font-size:13px;color:var(--muted)">Checking session…</div>
+  </div>
+
+  <!-- Login form (shown when not authenticated) -->
+  <div id="ls-login" style="display:none;flex-direction:column;align-items:center;gap:16px;width:100%;max-width:340px;padding:0 20px">
+    <svg width="160" height="68" viewBox="0 0 200 84" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:4px">
+      <polyline points="0,42 30,42 36,37 42,42 56,42 61,50 67,8 73,58 79,42 92,26 98,42 130,42 200,42"
+        stroke="var(--accent)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div style="text-align:center">
+      <div style="font-weight:800;font-size:20px;letter-spacing:-0.3px">Class Manager <span style="color:var(--accent)">Pro</span></div>
+      <div style="font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-top:3px">Paramedic Instructor Portal</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px">Sign In</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <label style="font-size:10px;color:var(--accent);font-family:monospace;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px">Email</label>
+          <input id="ls-email" type="email" placeholder="you@example.com" autocomplete="email"
+            style="width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" />
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--accent);font-family:monospace;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px">Password</label>
+          <input id="ls-password" type="password" placeholder="••••••••" autocomplete="current-password"
+            style="width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--text);outline:none;box-sizing:border-box"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+            onkeydown="if(event.key==='Enter')lsSignIn()" />
+        </div>
+        <div id="ls-err" style="font-size:11px;color:var(--danger);display:none"></div>
+        <button onclick="lsSignIn()" id="ls-btn"
+          style="width:100%;padding:12px;border-radius:10px;border:2px solid var(--accent);background:transparent;color:var(--accent);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;transition:background .15s,color .15s"
+          onmouseover="this.style.background='var(--accent)';this.style.color='#000'"
+          onmouseout="this.style.background='transparent';this.style.color='var(--accent)'">
+          Sign In
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <header>
@@ -1101,13 +1141,39 @@ function activateDashTab(which){
 // ============================================================
 const ADMIN_EMAIL='eliasacaldwellnrp@gmail.com';
 
+function lsSignIn(){
+  const email=$('ls-email').value.trim();
+  const pass=$('ls-password').value;
+  const err=$('ls-err');const btn=$('ls-btn');
+  if(!email||!pass){err.textContent='Email and password required.';err.style.display='block';return;}
+  btn.textContent='…';btn.disabled=true;err.style.display='none';
+  fbAuth.signInWithEmailAndPassword(email,pass).catch(e=>{
+    const msg={
+      'auth/wrong-password':'Incorrect password.',
+      'auth/user-not-found':'No account found with this email.',
+      'auth/invalid-credential':'Incorrect email or password.',
+      'auth/too-many-requests':'Too many attempts. Try again later.',
+      'auth/invalid-email':'Enter a valid email address.',
+    }[e.code]||'Sign-in failed. Check your credentials.';
+    err.textContent=msg;err.style.display='block';
+    btn.textContent='Sign In';btn.disabled=false;
+  });
+}
+
 fbAuth.onAuthStateChanged(user=>{
-  if(!user){unsubs.forEach(u=>u());window.location.replace('index.html?returnTo=ClassManager.html');return;}
-  if(user.email!==ADMIN_EMAIL){
-    fbAuth.signOut();
-    window.location.replace('index.html?returnTo=ClassManager.html');
+  if(!user){
+    unsubs.forEach(u=>u());
+    $('ls-checking').style.display='none';
+    $('ls-login').style.display='flex';
     return;
   }
+  if(user.email!==ADMIN_EMAIL){
+    fbAuth.signOut();
+    return;
+  }
+  // Restore loading spinner while data loads, hide login form
+  $('ls-login').style.display='none';
+  $('ls-checking').style.display='flex';
   UID=user.uid;
   setupListeners();
 });
