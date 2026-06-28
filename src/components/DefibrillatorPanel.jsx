@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import { RHYTHMS } from '../data/rhythms'
-import { playChargeSound, playShockSound, playAlertBeep, resumeAudio } from '../utils/audio'
+import { playChargeSound, playShockSound, playAlertBeep, resumeAudio, speak } from '../utils/audio'
 
 const ENERGY_OPTIONS = [50, 100, 150, 200, 360]
 
@@ -27,17 +27,23 @@ export default function DefibrillatorPanel() {
     resumeAudio()
     dispatch({ type: 'START_CHARGING' })
     playChargeSound()
+    speak('Charging')
     chargeTimerRef.current = setTimeout(() => {
       dispatch({ type: 'CHARGE_COMPLETE' })
       playAlertBeep()
+      speak('Charged. Stand clear.')
     }, 1600)
   }
 
   // Actual energy delivery — only reached after a CLEAR confirmation.
   function deliverShock() {
     resumeAudio()
-    playShockSound()
-    dispatch({ type: 'DELIVER_SHOCK' })
+    speak('Stay clear.')
+    setTimeout(() => {
+      playShockSound()
+      dispatch({ type: 'DELIVER_SHOCK' })
+      speak('Shock delivered. Resume CPR.')
+    }, 600)
     setConfirmClear(false)
     setAedAnalysis(null)
 
@@ -56,12 +62,14 @@ export default function DefibrillatorPanel() {
     if (!defib.padsConnected) return
     resumeAudio()
     setAedAnalysis('analyzing')
+    speak('Analyzing rhythm. Do not touch the patient.')
     if (!defib.charged && !defib.charging) {
       dispatch({ type: 'SET_ENERGY', energy: 200 })
     }
     setTimeout(() => {
       if (rhythm.shockable) {
         setAedAnalysis('shock')
+        speak('Shock advised. Stand clear.')
         dispatch({ type: 'START_CHARGING' })
         playChargeSound()
         chargeTimerRef.current = setTimeout(() => {
@@ -70,6 +78,7 @@ export default function DefibrillatorPanel() {
         }, 1600)
       } else {
         setAedAnalysis('noshock')
+        speak('No shock advised. If no pulse, begin CPR.')
       }
     }, 1800)
   }

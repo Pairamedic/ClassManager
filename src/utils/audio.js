@@ -78,3 +78,13 @@ export function playMetronomeClick(accent = false) {
 export function resumeAudio() {
   try { getCtx().resume() } catch {}
 }
+
+export function speak(text, { rate = 0.88, pitch = 0.9 } = {}) {
+  try {
+    window.speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(text)
+    u.rate  = rate
+    u.pitch = pitch
+    window.speechSynthesis.speak(u)
+  } catch {}
+}
