@@ -1,12 +1,8 @@
 import { initializeApp, getApps } from 'firebase/app'
 import {
   getFirestore, collection, addDoc, getDocs,
-  deleteDoc, doc, query, orderBy, setDoc, getDoc, onSnapshot,
+  deleteDoc, doc, query, orderBy,
 } from 'firebase/firestore'
-import {
-  getDatabase, ref as dbRef, onValue, set as dbSet,
-  push as dbPush, remove as dbRemove, onChildAdded,
-} from 'firebase/database'
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -24,11 +20,9 @@ const cfg = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
   appId:             import.meta.env.VITE_FIREBASE_APP_ID             || '',
   measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID     || '',
-  databaseURL:       import.meta.env.VITE_FIREBASE_DATABASE_URL       || '',
 }
 
 export const firebaseReady = !!(cfg.apiKey && cfg.projectId)
-export const realtimeReady = firebaseReady && !!cfg.databaseURL
 
 function getApp() {
   return getApps().length ? getApps()[0] : initializeApp(cfg)
@@ -39,13 +33,6 @@ function db() {
   if (!firebaseReady) throw new Error('Firebase not configured — add VITE_FIREBASE_* to .env')
   if (!_db) _db = getFirestore(getApp())
   return _db
-}
-
-let _rtdb = null
-function rtdb() {
-  if (!realtimeReady) throw new Error('Realtime Database not configured — add VITE_FIREBASE_DATABASE_URL to .env')
-  if (!_rtdb) _rtdb = getDatabase(getApp())
-  return _rtdb
 }
 
 let _auth = null
@@ -95,52 +82,6 @@ export async function fbDeleteScenario(id) {
   await deleteDoc(doc(db(), 'acls_scenarios', id))
 }
 
-// ── Live rooms (instructor → student real-time sync) ──────
-const ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-export function generateRoomCode() {
-  return Array.from({ length: 4 }, () => ROOM_CHARS[Math.floor(Math.random() * ROOM_CHARS.length)]).join('')
-}
-
-function serializeInstructorState(state) {
-  return {
-    currentRhythm:    state.currentRhythm,
-    vitals:           { ...state.vitals },
-    vitalsHidden:     state.vitalsHidden,
-    labelHidden:      state.labelHidden,
-    isRunning:        state.isRunning,
-    scenarioName:     state.scenarioName || null,
-    reversibleCauses: [...state.reversibleCauses],
-    captureThreshold: state.pacer.captureThreshold,
-    rosc:             state.rosc,
-    roscTime:         state.roscTime || null,
-    updatedAt:        Date.now(),
-  }
-}
-
-export async function createRoom(code, state) {
-  await setDoc(doc(db(), 'rooms', code), {
-    instructor: serializeInstructorState(state),
-    createdAt: Date.now(),
-  })
-}
-
-export async function roomExists(code) {
-  const snap = await getDoc(doc(db(), 'rooms', code))
-  return snap.exists()
-}
-
-export function subscribeRoom(code, onChange) {
-  return onSnapshot(doc(db(), 'rooms', code), snap => {
-    if (snap.exists()) onChange(snap.data().instructor)
-  })
-}
-
-export async function pushInstructorState(code, state) {
-  await setDoc(doc(db(), 'rooms', code), {
-    instructor: serializeInstructorState(state),
-  }, { merge: true })
-}
-
 // ── Student simulation sessions ───────────────────────────
 export async function fbSaveSession(payload) {
   const ref = await addDoc(collection(db(), 'acls_sessions'), {
@@ -159,27 +100,4 @@ export async function fbLoadSessions() {
 
 export async function fbDeleteSession(id) {
   await deleteDoc(doc(db(), 'acls_sessions', id))
-}
-
-// ── Realtime remote control (RTDB phone ↔ monitor) ───────
-export function rtPublishState(room, snapshot) {
-  return dbSet(dbRef(rtdb(), `rooms/${room}/state`), snapshot)
-}
-
-export function rtSubscribeState(room, cb) {
-  const r = dbRef(rtdb(), `rooms/${room}/state`)
-  return onValue(r, snap => cb(snap.val()))
-}
-
-export function rtSendCommand(room, action) {
-  return dbPush(dbRef(rtdb(), `rooms/${room}/commands`), { ...action, _ts: Date.now() })
-}
-
-export function rtSubscribeCommands(room, cb) {
-  const r = dbRef(rtdb(), `rooms/${room}/commands`)
-  return onChildAdded(r, snap => {
-    const action = snap.val()
-    cb(action)
-    dbRemove(dbRef(rtdb(), `rooms/${room}/commands/${snap.key}`))
-  })
 }

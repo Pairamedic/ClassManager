@@ -22,12 +22,14 @@ function elapsed(ts) {
 
 export default function MedLogPanel() {
   const { state, dispatch } = useSimulator()
-  const [selectedIdx, setSelectedIdx] = useState(0)
+  const [selectedIdx, setSelectedIdx] = useState('')   // '' = nothing chosen yet
 
-  const selected = MEDS[selectedIdx]
+  const selected = selectedIdx === '' ? null : MEDS[selectedIdx]
 
   function giveMed() {
+    if (!selected) return
     dispatch({ type: 'LOG_MED', drug: selected.drug, dose: selected.dose })
+    setSelectedIdx('')   // return the picker to the VIEW MEDICATIONS prompt
   }
 
   return (
@@ -35,25 +37,31 @@ export default function MedLogPanel() {
 
       {/* ── Left: med picker ── */}
       <div className="flex flex-col justify-center gap-2 p-2 shrink-0" style={{ width: '52%' }}>
-        <select
-          value={selectedIdx}
-          onChange={e => setSelectedIdx(Number(e.target.value))}
-          className="w-full rounded-lg border border-ecg-border bg-surface2 text-ink text-xs font-mono px-2 py-2 focus:outline-none focus:border-ecg-amber appearance-none cursor-pointer"
-          style={{ minHeight: '36px' }}
-        >
-          {MEDS.map((m, i) => (
-            <option key={i} value={i}>
-              {m.drug} — {m.dose}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            value={selectedIdx}
+            onChange={e => setSelectedIdx(e.target.value === '' ? '' : Number(e.target.value))}
+            className="w-full rounded-lg border border-ecg-border bg-surface2 text-ink text-xs font-mono pl-2 pr-7 py-2 focus:outline-none focus:border-ecg-amber appearance-none cursor-pointer"
+            style={{ minHeight: '36px' }}
+          >
+            <option value="">VIEW MEDICATIONS</option>
+            {MEDS.map((m, i) => (
+              <option key={i} value={i}>
+                {m.drug} — {m.dose}
+              </option>
+            ))}
+          </select>
+          {/* chevron so it reads as a dropdown with more options inside */}
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-ecg-amber text-[10px]">▼</span>
+        </div>
 
         <button
           onClick={giveMed}
-          className="w-full rounded-lg border-2 border-ecg-amber bg-ecg-amber/10 text-ecg-amber font-bold text-xs uppercase tracking-widest active:scale-95 transition-all hover:bg-ecg-amber/20"
+          disabled={!selected}
+          className="w-full rounded-lg border-2 border-ecg-amber bg-ecg-amber/10 text-ecg-amber font-bold text-xs uppercase tracking-widest active:scale-95 transition-all hover:bg-ecg-amber/20 disabled:opacity-40 disabled:active:scale-100"
           style={{ minHeight: '36px' }}
         >
-          Give {selected.drug}
+          {selected ? `Give ${selected.drug}` : 'Select a medication'}
         </button>
       </div>
 

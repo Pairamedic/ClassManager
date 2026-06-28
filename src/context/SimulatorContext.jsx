@@ -54,10 +54,15 @@ function logEvent(state, entry) {
 function reducer(state, action) {
   switch (action.type) {
     case 'SET_RHYTHM': {
-      const reArrest = RHYTHMS[action.rhythm]?.pulse === false
+      const next = RHYTHMS[action.rhythm]
+      const reArrest = next?.pulse === false
+      // Snap HR to the rhythm's native rate so the displayed rate and the
+      // EKG trace start in sync; the instructor can then fine-tune HR.
+      const hr = next ? next.rate : state.vitals.hr
       return {
         ...state,
         currentRhythm: action.rhythm,
+        vitals: { ...state.vitals, hr },
         rosc: reArrest ? false : state.rosc,
         rhythmHistory: [...state.rhythmHistory, { rhythm: action.rhythm, time: Date.now() }],
         eventLog: action.silent
@@ -218,28 +223,6 @@ function reducer(state, action) {
         cpr: { ...state.cpr, active: false },
         eventLog: logEvent(state, { type: 'code', label: 'Code stopped' }),
       }
-
-    // Applied by student device when instructor pushes state over a room
-    case 'APPLY_INSTRUCTOR_STATE': {
-      const p = action.payload
-      const rhythmChanged = p.currentRhythm && p.currentRhythm !== state.currentRhythm
-      return {
-        ...state,
-        currentRhythm:    p.currentRhythm    ?? state.currentRhythm,
-        vitals:           p.vitals            ?? state.vitals,
-        vitalsHidden:     p.vitalsHidden      ?? state.vitalsHidden,
-        labelHidden:      p.labelHidden       ?? state.labelHidden,
-        isRunning:        p.isRunning         ?? state.isRunning,
-        scenarioName:     p.scenarioName      ?? state.scenarioName,
-        reversibleCauses: p.reversibleCauses  ?? state.reversibleCauses,
-        pacer: { ...state.pacer, captureThreshold: p.captureThreshold ?? state.pacer.captureThreshold },
-        rosc:    p.rosc    ?? state.rosc,
-        roscTime: p.roscTime ?? state.roscTime,
-        rhythmHistory: rhythmChanged
-          ? [...state.rhythmHistory, { rhythm: p.currentRhythm, time: Date.now() }]
-          : state.rhythmHistory,
-      }
-    }
 
     case 'RESET_SESSION':
       return {

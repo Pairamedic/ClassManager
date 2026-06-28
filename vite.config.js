@@ -10,13 +10,12 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'Class Manager Pro',
-        short_name: 'CM Pro',
-        description: 'ACLS Instructor Platform — rhythm simulator, debrief metrics, student sessions',
+        name: 'CM Simulator',
+        short_name: 'CM Sim',
+        description: 'Cardiac monitor simulator — ACLS rhythms, defibrillator, pacer, and debrief metrics',
         theme_color: '#0d0f12',
         background_color: '#0d0f12',
         display: 'standalone',
-        orientation: 'landscape',
         icons: [
           { src: 'icon.svg', type: 'image/svg+xml', sizes: 'any', purpose: 'any maskable' },
         ],

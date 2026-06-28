@@ -29,35 +29,41 @@ function thirdDegreeY(t) {
 }
 
 export function useECGCanvas(canvasRef, rhythmId, options = {}) {
-  const {
-    pacerActive       = false,
-    pacerRate         = 70,
-    pacerOutput       = 0,
-    captureThreshold  = 60,
-    isRunning         = true,
-    syncMode          = false,
-    _canvasReady,
-  } = options
+  // Keep the latest dynamic options in a ref so the animation loop can read
+  // live values (HR, pacer, sync, pause) without tearing down and restarting
+  // — that's what lets a rate change update the trace smoothly mid-stream.
+  const optsRef = useRef(options)
+  optsRef.current = options
 
   const stateRef = useRef({ offset: 0, beatNum: 0, beatStart: 0, beatLen: beatLenPx(75), prevY: null, prevRawY: null })
   const rafRef   = useRef(null)
 
+  const { width = 0, height = 0, dpr = 1 } = options
+
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    if (!canvas.width || !canvas.height) return
+    if (!width || !height) return
 
-    // Work in CSS pixel space — scale ctx to match physical pixels
-    const dpr   = window.devicePixelRatio || 1
-    const W     = canvas.width  / dpr   // CSS px
-    const H     = canvas.height / dpr   // CSS px
+    // Work in CSS pixel space — scale ctx to match physical pixels.
+    const W     = width
+    const H     = height
     const MID   = H / 2
     const SCALE = H * 0.38
 
-    const rhythm   = RHYTHMS[rhythmId] || RHYTHMS.NSR
-    const pacing   = pacerActive
-    const captured = pacing && pacerOutput >= captureThreshold
-    const pacerCL  = beatLenPx(Math.max(30, pacerRate))
+    const rhythm = RHYTHMS[rhythmId] || RHYTHMS.NSR
+
+    // Effective heart rate: a positive HR override drives the displayed rate,
+    // otherwise fall back to the rhythm's native rate. Chaos (VF/asystole/
+    // torsades) and dual (3°) rhythms carry their own timing.
+    function effectiveRate() {
+      const hr = optsRef.current.hr
+      return (typeof hr === 'number' && hr > 0) ? hr : rhythm.rate
+    }
+    function baseBeatLen() {
+      if (rhythm.type === 'chaos' || rhythm.type === 'dual') return PIXELS_PER_SEC
+      return beatLenPx(effectiveRate())
+    }
 
     const s = stateRef.current
     s.offset    = 0
@@ -65,9 +71,7 @@ export function useECGCanvas(canvasRef, rhythmId, options = {}) {
     s.beatStart = 0
     s.prevY     = null
     s.prevRawY  = null
-    s.beatLen   = (rhythm.type === 'chaos' || rhythm.type === 'dual')
-      ? PIXELS_PER_SEC
-      : beatLenPx(rhythm.rate)
+    s.beatLen   = baseBeatLen()
 
     const ctx = canvas.getContext('2d')
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -91,7 +95,7 @@ export function useECGCanvas(canvasRef, rhythmId, options = {}) {
 
     function nextBeatLen(beatNum) {
       if (rhythm.type === 'chaos' || rhythm.type === 'dual') return PIXELS_PER_SEC
-      const base = beatLenPx(rhythm.rate)
+      const base = beatLenPx(effectiveRate())
       if (rhythm.type === 'irregular')
         return afibBeatLen(base, beatNum, rhythm.rateVariability)
       if (rhythm.rateVariability > 0) {
@@ -116,7 +120,11 @@ export function useECGCanvas(canvasRef, rhythmId, options = {}) {
     }
 
     function getY(t) {
+      const o = optsRef.current
+      const pacing   = o.pacerActive
+      const captured = pacing && o.pacerOutput >= o.captureThreshold
       if (pacing) {
+        const pacerCL = beatLenPx(Math.max(30, o.pacerRate))
         const ph = t % pacerCL
         if (ph < 2) return 1.05
         if (captured) {
@@ -129,7 +137,8 @@ export function useECGCanvas(canvasRef, rhythmId, options = {}) {
     }
 
     function draw() {
-      if (!isRunning) {
+      const o = optsRef.current
+      if (o.isRunning === false) {
         rafRef.current = requestAnimationFrame(draw)
         return
       }
@@ -175,7 +184,7 @@ export function useECGCanvas(canvasRef, rhythmId, options = {}) {
       }
 
       // Sync mode: draw marker at right edge on R-peak; scrolls naturally with trace.
-      if (syncMode) {
+      if (o.syncMode) {
         const nextRawY = getY(t + SPEED)
         const prevRaw  = s.prevRawY ?? 0
         if (y > 0.45 && y > prevRaw && y >= nextRawY) {
@@ -204,6 +213,8 @@ export function useECGCanvas(canvasRef, rhythmId, options = {}) {
     rafRef.current = requestAnimationFrame(draw)
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
 
+  // Restart only when the rhythm or the canvas geometry changes; all other
+  // params are read live from optsRef so rate/pacer tweaks stay smooth.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rhythmId, pacerActive, pacerRate, pacerOutput, captureThreshold, isRunning, syncMode, _canvasReady])
+  }, [rhythmId, width, height, dpr])
 }
