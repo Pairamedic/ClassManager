@@ -6,24 +6,27 @@ export default function ECGWaveform() {
   const { state } = useSimulator()
   const containerRef = useRef(null)
   const canvasRef    = useRef(null)
-  const [canvasReady, setCanvasReady] = useState(false)
+  const [dims, setDims] = useState({ width: 0, height: 0, dpr: 1 })
 
-  // Fit canvas backing store to physical pixels; signal hook on resize
+  // Size the backing store to physical pixels from committed layout, and only
+  // publish real (non-zero) sizes so the very first draw is crisp at full DPR.
   useEffect(() => {
     const el     = containerRef.current
     const canvas = canvasRef.current
     if (!el || !canvas) return
 
     function resize() {
-      const w = el.offsetWidth
-      const h = el.offsetHeight
+      const w = el.clientWidth
+      const h = el.clientHeight
       if (!w || !h) return
       const dpr = window.devicePixelRatio || 1
       canvas.width  = Math.round(w * dpr)
       canvas.height = Math.round(h * dpr)
       canvas.style.width  = w + 'px'
       canvas.style.height = h + 'px'
-      setCanvasReady(r => !r)
+      setDims(prev =>
+        (prev.width === w && prev.height === h && prev.dpr === dpr) ? prev : { width: w, height: h, dpr }
+      )
     }
 
     resize()
@@ -39,7 +42,10 @@ export default function ECGWaveform() {
     captureThreshold: state.pacer.captureThreshold,
     isRunning:        state.isRunning,
     syncMode:         state.defib.syncMode,
-    _canvasReady:     canvasReady,
+    hr:               state.vitals.hr,
+    width:            dims.width,
+    height:           dims.height,
+    dpr:              dims.dpr,
   })
 
   return (

@@ -72,10 +72,10 @@ export default function LoginPage() {
         <div className="flex flex-col items-center mb-8">
           <EcgLogo size={180} />
           <h1 className="text-2xl font-black text-ink tracking-tight mt-3">
-            Class Manager <span className="text-ecg-green">Pro</span>
+            CM <span className="text-ecg-green">Simulator</span>
           </h1>
           <p className="text-[11px] text-ecg-gray font-mono uppercase tracking-widest mt-1">
-            ACLS Instructor Platform
+            Cardiac Monitor Simulator
           </p>
         </div>
 
