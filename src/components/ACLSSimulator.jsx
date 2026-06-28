@@ -75,9 +75,8 @@ export default function ACLSSimulator({ remoteRoom, onExitMode }) {
           <HeaderButton onClick={() => setShowSessions(true)}>Sessions</HeaderButton>
         </div>
 
-        {/* Center: theme toggle + scenario + room badge */}
+        {/* Center: scenario label + room badge */}
         <div className="flex items-center gap-2 min-w-0">
-          <ThemeToggle />
           {remoteRoom && (
             <button
               onClick={onExitMode}
@@ -116,13 +115,24 @@ export default function ACLSSimulator({ remoteRoom, onExitMode }) {
 
         {/* Right cluster */}
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <span className="text-xs text-ecg-gray font-mono whitespace-nowrap">
             Shocks <span className="text-ecg-red font-bold">{state.defib.shocksDelivered}</span>
           </span>
           <HeaderButton onClick={() => setShowPrint(true)}>Print</HeaderButton>
           <CodeClock />
-          {/* User avatar + sign out */}
-          {user && (
+          {/* Student exit button */}
+          {isStudent && onExitMode && (
+            <button
+              onClick={onExitMode}
+              title="Exit to Class Manager"
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-ecg-border bg-surface2 text-ecg-gray text-[11px] hover:text-ink hover:border-ecg-gray transition-colors"
+            >
+              ✕
+            </button>
+          )}
+          {/* User avatar + sign out (non-student) */}
+          {user && !isStudent && (
             <button
               onClick={() => signOut()}
               title={`Signed in as ${user.email}\nTap to sign out`}
@@ -157,7 +167,6 @@ export default function ACLSSimulator({ remoteRoom, onExitMode }) {
       {showAlgos    && <AlgorithmModal onClose={() => setShowAlgos(false)} />}
       {showSessions && <SessionsModal  onClose={() => setShowSessions(false)} />}
       {showRoom     && <RoomModal      onClose={() => setShowRoom(false)} />}
-
     </div>
   )
 }
