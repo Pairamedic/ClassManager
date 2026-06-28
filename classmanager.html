@@ -1279,31 +1279,37 @@ fbAuth.onAuthStateChanged(user=>{
 });
 
 function setupListeners(){
+  // Fallback: force-hide loading screen after 8s in case Firestore is slow
+  setTimeout(() => {
+    $('loading-screen').classList.add('hidden');
+  }, 8000);
+
+  const errAndShow = e => { console.error(e); $('loading-screen').classList.add('hidden'); };
   unsubs.push(col('classes').orderBy('date','asc').onSnapshot(snap=>{
     allClasses=snap.docs.map(d=>({id:d.id,...d.data()}));
     refreshView();
-  },console.error));
+  },errAndShow));
   unsubs.push(col('students').orderBy('lastName','asc').onSnapshot(snap=>{
     allStudents=snap.docs.map(d=>({id:d.id,...d.data()}));
     refreshView();
-  },console.error));
+  },errAndShow));
   unsubs.push(col('roster').onSnapshot(snap=>{
     allRoster=snap.docs.map(d=>({id:d.id,...d.data()}));
     refreshView();
-  },console.error));
+  },errAndShow));
   unsubs.push(col('certs').onSnapshot(snap=>{
     allCerts=snap.docs.map(d=>({id:d.id,...d.data()}));
     refreshView();
-  },console.error));
+  },errAndShow));
   unsubs.push(col('expenses').orderBy('date','desc').onSnapshot(snap=>{
     allExpenses=snap.docs.map(d=>({id:d.id,...d.data()}));
     refreshView();
-  },console.error));
+  },errAndShow));
   unsubs.push(col('materials').orderBy('uploadedAt','desc').onSnapshot(snap=>{
     allMaterials=snap.docs.map(d=>({id:d.id,...d.data()}));
     if(currentView==='materials')renderMaterials();
     $('loading-screen').classList.add('hidden');
-  },console.error));
+  },errAndShow));
   col('settings').doc('info').onSnapshot(snap=>{
     infoDoc=snap.exists?snap.data():{};
     if($('subpanel-dash-info').style.display!=='none')renderInfo();
