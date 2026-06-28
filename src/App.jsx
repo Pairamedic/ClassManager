@@ -2,6 +2,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { SimulatorProvider } from './context/SimulatorContext'
 import ACLSSimulator from './components/ACLSSimulator'
 import LoginPage from './components/LoginPage'
+import UpdatePrompt from './components/UpdatePrompt'
 
 function AppInner() {
   const { user, loading } = useAuth()
@@ -29,6 +30,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppInner />
+      <UpdatePrompt />
     </AuthProvider>
   )
 }
