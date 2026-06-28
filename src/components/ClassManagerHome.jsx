@@ -48,7 +48,7 @@ export default function ClassManagerHome({ onLaunchSimulator, onLaunchRemote }) 
             {user?.displayName ? `Welcome, ${user.displayName}` : 'Class Manager'}
           </div>
           <div className="text-ecg-gray text-xs font-mono uppercase tracking-[0.3em] mt-1">
-            ACLS Instructor Platform
+            Instructor Platform
           </div>
         </div>
 
