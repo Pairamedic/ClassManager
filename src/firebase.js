@@ -17,13 +17,13 @@ import {
 } from 'firebase/auth'
 
 const cfg = {
-  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            || 'AIzaSyDDCM69agn_siiIwd9429urrd6ShAQXnyE',
-  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN        || 'classmanager-ad588.firebaseapp.com',
-  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID         || 'classmanager-ad588',
-  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET     || 'classmanager-ad588.firebasestorage.app',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '1016222970430',
-  appId:             import.meta.env.VITE_FIREBASE_APP_ID             || '1:1016222970430:web:7e1077fe12ef369ae4576f',
-  measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID     || 'G-6KX9NP2W7X',
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            || '',
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN        || '',
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID         || '',
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET     || '',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID             || '',
+  measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID     || '',
   databaseURL:       import.meta.env.VITE_FIREBASE_DATABASE_URL       || '',
 }
 
