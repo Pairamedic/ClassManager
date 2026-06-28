@@ -1,8 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { RHYTHMS, PIXELS_PER_SEC, beatLenPx, afibBeatLen } from '../data/rhythms'
 
-const SPEED = PIXELS_PER_SEC / 60  // CSS px/frame @ 60fps
-
 function seededRng(seed) {
   const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453
   return Math.abs(x - Math.floor(x))
@@ -35,7 +33,7 @@ export function useECGCanvas(canvasRef, rhythmId, options = {}) {
   const optsRef = useRef(options)
   optsRef.current = options
 
-  const stateRef = useRef({ offset: 0, beatNum: 0, beatStart: 0, beatLen: beatLenPx(75), prevY: null, prevRawY: null })
+  const stateRef = useRef({})
   const rafRef   = useRef(null)
 
   const { width = 0, height = 0, dpr = 1 } = options
@@ -66,12 +64,16 @@ export function useECGCanvas(canvasRef, rhythmId, options = {}) {
     }
 
     const s = stateRef.current
-    s.offset    = 0
+    // t — the trace's "paper position" in CSS px (advances with real time).
+    s.t         = 0
     s.beatNum   = 0
     s.beatStart = 0
-    s.prevY     = null
-    s.prevRawY  = null
     s.beatLen   = baseBeatLen()
+    s.prevY     = null
+    s.lastTime  = null   // timestamp of previous animation frame
+    s.carryPhys = 0      // sub-pixel scroll remainder carried between frames
+    s.syncP0    = null   // sync R-peak detection: two-samples-ago {y, t}
+    s.syncP1    = null   // sync R-peak detection: previous sample {y, t}
 
     const ctx = canvas.getContext('2d')
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -105,6 +107,9 @@ export function useECGCanvas(canvasRef, rhythmId, options = {}) {
       return base
     }
 
+    // Pure-ish function of t (monotonically increasing). The beat-stepping
+    // state only ever advances forward, so calling this with a steadily rising
+    // t — as the loop does — keeps irregular rhythms reproducible.
     function rhythmY(t) {
       if (rhythm.type === 'dual')  return thirdDegreeY(t)
       if (rhythm.type === 'chaos') return rhythm.waveform(0, t)
@@ -136,78 +141,113 @@ export function useECGCanvas(canvasRef, rhythmId, options = {}) {
       return rhythmY(t)
     }
 
-    function draw() {
+    // Seed the first connecting point so the trace is continuous from frame 1.
+    s.prevY = MID - getY(0) * SCALE
+
+    function draw(now) {
+      rafRef.current = requestAnimationFrame(draw)
       const o = optsRef.current
-      if (o.isRunning === false) {
-        rafRef.current = requestAnimationFrame(draw)
-        return
-      }
 
-      const t = s.offset
+      // Time-based stepping: how far the paper should advance is a function of
+      // real elapsed time, so the rhythm runs at the correct speed on a 60 Hz
+      // phone and a 120 Hz ProMotion iPad alike.
+      if (s.lastTime == null) s.lastTime = now
+      let dt = (now - s.lastTime) / 1000
+      s.lastTime = now
 
-      // Scroll: reset to identity so drawImage shifts by physical pixels, then restore scale
+      if (o.isRunning === false) return
+      if (dt > 0.25) dt = 0.25  // tab was backgrounded — don't fast-forward
+
+      // Scroll by a whole number of physical pixels and carry the remainder,
+      // so the scrolled image and the freshly drawn trace stay pixel-aligned
+      // at any device pixel ratio (this is what removes the "scatter").
+      s.carryPhys += PIXELS_PER_SEC * dpr * dt
+      let stepPhys = Math.floor(s.carryPhys)
+      if (stepPhys <= 0) return
+      s.carryPhys -= stepPhys
+      const maxPhys = Math.ceil(W * dpr)
+      if (stepPhys > maxPhys) stepPhys = maxPhys
+
+      const stepCss = stepPhys / dpr
+      const tEnd    = s.t + stepCss
+
+      // Shift the existing trace left by exactly stepPhys physical pixels.
       ctx.save()
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.imageSmoothingEnabled = false
-      ctx.drawImage(canvas, -Math.round(SPEED * dpr), 0)
+      ctx.drawImage(canvas, -stepPhys, 0)
       ctx.restore()
 
-      // Erase right strip (CSS px space)
+      // Repaint the freshly exposed strip on the right (CSS px space).
+      const stripX = W - stepCss
       ctx.fillStyle = '#050810'
-      ctx.fillRect(W - SPEED - 2, 0, SPEED + 2, H)
+      ctx.fillRect(stripX, 0, stepCss + 1, H)
 
-      // Grid lines in right strip
+      // Horizontal grid across the strip.
       ctx.strokeStyle = 'rgba(0,70,45,0.5)'
       ctx.lineWidth = 0.5
-      const stripX = W - SPEED - 2
-      if (Math.round((t + SPEED) % 40) < Math.ceil(SPEED) + 2) {
-        ctx.beginPath(); ctx.moveTo(stripX, 0); ctx.lineTo(stripX, H); ctx.stroke()
-      }
       for (let gy = 0; gy < H; gy += 20) {
         ctx.beginPath(); ctx.moveTo(stripX, gy); ctx.lineTo(W, gy); ctx.stroke()
       }
-
-      // Draw trace
-      const y       = getY(t)
-      const canvasY = MID - y * SCALE
-
-      if (s.prevY !== null) {
-        ctx.strokeStyle = '#00e5a0'
-        ctx.lineWidth   = 1.5
-        ctx.shadowColor = '#00e5a0'
-        ctx.shadowBlur  = 4
-        ctx.beginPath()
-        ctx.moveTo(W - SPEED - 1, s.prevY)
-        ctx.lineTo(W, canvasY)
-        ctx.stroke()
-        ctx.shadowBlur = 0
+      // Vertical grid lines (every 40 px of paper) that fall inside the strip.
+      for (let gx = Math.ceil(s.t / 40) * 40; gx <= tEnd; gx += 40) {
+        const x = W - (tEnd - gx)
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke()
       }
 
-      // Sync mode: draw marker at right edge on R-peak; scrolls naturally with trace.
-      if (o.syncMode) {
-        const nextRawY = getY(t + SPEED)
-        const prevRaw  = s.prevRawY ?? 0
-        if (y > 0.45 && y > prevRaw && y >= nextRawY) {
-          ctx.save()
-          ctx.fillStyle = '#ffffff'
-          const hw = 4, th = 8
-          const tipX = W - 1
-          const tipY = canvasY - 4
+      // Draw the trace one physical-pixel column at a time. A continuous
+      // polyline means no gaps regardless of how many columns advanced this
+      // frame, so the waveform never looks broken up.
+      ctx.strokeStyle = '#00e5a0'
+      ctx.lineWidth   = 1.5
+      ctx.shadowColor = '#00e5a0'
+      ctx.shadowBlur  = 4
+      ctx.beginPath()
+      ctx.moveTo(stripX, s.prevY)
+
+      const markers = []
+      let lastY = s.prevY
+      for (let i = 1; i <= stepPhys; i++) {
+        const subT = s.t + i / dpr
+        const y    = getY(subT)
+        const x    = stripX + i / dpr
+        lastY      = MID - y * SCALE
+        ctx.lineTo(x, lastY)
+
+        // Sync mode: flag a 3-point local maximum (the R-peak). World time is
+        // stored so the marker lands at the right column even when the peak
+        // straddles a frame boundary.
+        if (o.syncMode) {
+          const p0 = s.syncP0, p1 = s.syncP1
+          if (p0 && p1 && p1.y > 0.45 && p1.y > p0.y && p1.y >= y) {
+            markers.push({ x: W - (tEnd - p1.t), y: MID - p1.y * SCALE })
+          }
+          s.syncP0 = p1
+          s.syncP1 = { y, t: subT }
+        }
+      }
+      ctx.stroke()
+      ctx.shadowBlur = 0
+
+      // Sync R-peak markers, painted after the trace so they sit on top.
+      if (markers.length) {
+        ctx.save()
+        ctx.fillStyle = '#ffffff'
+        const hw = 4, th = 8
+        for (const m of markers) {
+          const tipY = m.y - 4
           ctx.beginPath()
-          ctx.moveTo(tipX - hw, tipY - th)
-          ctx.lineTo(tipX + hw, tipY - th)
-          ctx.lineTo(tipX,      tipY)
+          ctx.moveTo(m.x - hw, tipY - th)
+          ctx.lineTo(m.x + hw, tipY - th)
+          ctx.lineTo(m.x,      tipY)
           ctx.closePath()
           ctx.fill()
-          ctx.restore()
         }
-        s.prevRawY = y
+        ctx.restore()
       }
 
-      s.prevY   = canvasY
-      s.offset += SPEED
-
-      rafRef.current = requestAnimationFrame(draw)
+      s.prevY = lastY
+      s.t     = tEnd
     }
 
     rafRef.current = requestAnimationFrame(draw)

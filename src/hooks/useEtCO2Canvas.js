@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 
 const PPS = 80
-const SPEED = PPS / 60
 const CYCLE_PX = (PPS * 60) / 12  // 400 CSS px/breath at 12 bpm
 
 function capnoY(cyclePos, etco2, H) {
@@ -16,7 +15,9 @@ function capnoY(cyclePos, etco2, H) {
 }
 
 export function useEtCO2Canvas(canvasRef, { isRunning, etco2 = 35, _canvasReady } = {}) {
-  const offsetRef = useRef(0)
+  const offsetRef   = useRef(0)  // paper position in CSS px
+  const lastTimeRef = useRef(null)
+  const carryRef    = useRef(0)  // sub-pixel scroll remainder
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -30,35 +31,56 @@ export function useEtCO2Canvas(canvasRef, { isRunning, etco2 = 35, _canvasReady 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
     let raf
+    lastTimeRef.current = null
 
-    function frame() {
-      if (isRunning !== false) offsetRef.current += SPEED
+    function frame(now) {
+      raf = requestAnimationFrame(frame)
+
+      // Advance by real elapsed time so the waveform scrolls at the same speed
+      // on 60 Hz and 120 Hz displays, and scroll by whole physical pixels so
+      // the trace stays aligned at any device pixel ratio.
+      if (lastTimeRef.current == null) lastTimeRef.current = now
+      let dt = (now - lastTimeRef.current) / 1000
+      lastTimeRef.current = now
+
+      if (isRunning === false) return
+      if (dt > 0.25) dt = 0.25
+
+      carryRef.current += PPS * dpr * dt
+      let stepPhys = Math.floor(carryRef.current)
+      if (stepPhys <= 0) return
+      carryRef.current -= stepPhys
+      const maxPhys = Math.ceil(W * dpr)
+      if (stepPhys > maxPhys) stepPhys = maxPhys
+
+      const stepCss = stepPhys / dpr
+      offsetRef.current += stepCss
 
       ctx.save()
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.imageSmoothingEnabled = false
-      ctx.drawImage(canvas, -Math.round(SPEED * dpr), 0)
+      ctx.drawImage(canvas, -stepPhys, 0)
       ctx.restore()
 
-      const clearX = W - Math.ceil(SPEED) - 2
+      const clearX = W - stepCss
       ctx.fillStyle = '#0a0c0f'
-      ctx.fillRect(clearX, 0, W - clearX, H)
+      ctx.fillRect(clearX, 0, stepCss + 1, H)
 
       ctx.strokeStyle = '#f59e0b'
       ctx.lineWidth = 1.5
       ctx.beginPath()
 
+      const offset = offsetRef.current
       let first = true
-      for (let px = clearX; px < W; px++) {
-        const t  = offsetRef.current - (W - 1 - px)
+      for (let i = 0; i <= stepPhys; i++) {
+        const x  = clearX + i / dpr
+        const t  = offset - (W - x)
         const cp = ((t % CYCLE_PX) + CYCLE_PX) % CYCLE_PX
         const y  = capnoY(cp, etco2, H)
-        if (first) { ctx.moveTo(px, y); first = false }
-        else ctx.lineTo(px, y)
+        if (first) { ctx.moveTo(x, y); first = false }
+        else ctx.lineTo(x, y)
       }
       ctx.stroke()
-
-      raf = requestAnimationFrame(frame)
     }
 
     raf = requestAnimationFrame(frame)
