@@ -248,6 +248,7 @@
       <button class="tab" data-view="certs">🏅 Certs</button>
       <button class="tab" data-view="materials">📚 Materials</button>
       <button class="tab" data-view="simulator">🫀 Simulator</button>
+      <button class="tab" data-view="records">📁 Records</button>
     </nav>
   </div>
 </header>
@@ -503,9 +504,69 @@
     </div>
   </section>
 
+  <!-- RECORDS -->
+  <section class="view" id="view-records">
+    <div class="sec-hd">
+      <div class="sec-title">Student Records</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="rec-year-filter" class="btn sm" style="padding:7px 10px">
+          <option value="">All Years</option>
+        </select>
+        <button class="btn sm primary" id="rec-export-year-btn">⬇ Export Year</button>
+      </div>
+    </div>
+    <div class="notice" id="rec-storage-notice" style="display:none">
+      Firebase Storage is not enabled. Enable it in the Firebase console (Storage section) to upload records.
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="rec-search" placeholder="Search students…" />
+    </div>
+    <div id="records-list"></div>
+  </section>
+
 </main>
 
 <!-- ===== MODALS ===== -->
+
+<!-- STUDENT RECORDS MODAL -->
+<div class="overlay hidden" id="modal-student-records">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title" id="sr-title">Student Records</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px" id="sr-subtitle"></div>
+      </div>
+      <button class="close-btn" data-close="modal-student-records">×</button>
+    </div>
+
+    <!-- Upload area -->
+    <div style="border:2px dashed var(--border);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center" id="sr-drop-zone">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Drop files here or tap to upload</div>
+      <input type="file" id="sr-file-input" multiple style="display:none" />
+      <button class="btn sm primary" onclick="$('sr-file-input').click()">📎 Choose Files</button>
+      <div id="sr-upload-prog" class="upload-prog" style="text-align:left">
+        <div class="upload-prog-label">
+          <span id="sr-prog-name"></span>
+          <span id="sr-prog-pct"></span>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" id="sr-prog-bar" style="width:0%"></div></div>
+      </div>
+      <div id="sr-upload-err" style="font-size:12px;color:var(--danger);margin-top:8px"></div>
+    </div>
+
+    <!-- File list -->
+    <div id="sr-files-list">
+      <div class="empty" style="padding:24px 0"><div class="spin"></div></div>
+    </div>
+
+    <!-- Completed classes for this student -->
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Completed Classes</div>
+      <div id="sr-classes-list"></div>
+    </div>
+  </div>
+</div>
 
 <!-- INFO & FAQ PANEL -->
 <!-- NEW CLASS -->
@@ -961,6 +1022,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script>
 // ============================================================
 // INIT
@@ -973,11 +1035,13 @@ firebase.initializeApp({
   messagingSenderId: "498482397906",
   appId: "1:498482397906:web:5517abc5d83cf6cf15e30b"
 });
-const fbAuth = firebase.auth();
-const db     = firebase.firestore();
+const fbAuth    = firebase.auth();
+const db        = firebase.firestore();
+const fbStorage = firebase.storage();
 
 let UID = null;
-const col = name => db.collection(`users/${UID}/${name}`);
+const col     = name => db.collection(`users/${UID}/${name}`);
+const stgRef  = path => fbStorage.ref(path);
 
 // ============================================================
 // STATE
@@ -987,6 +1051,7 @@ let allFaq=[], infoDoc={};
 let currentView='dashboard';
 let currentClassId=null, currentStudentId=null, currentCertId=null, currentMatId=null, currentFaqId=null;
 let arSelectedStudentId=null, matFilterCat='';
+let currentRecordStudentId=null, recSearchQ='';
 const unsubs=[];
 
 // ============================================================
@@ -1251,7 +1316,7 @@ function setupListeners(){
 function refreshView(){
   $('loading-screen').classList.add('hidden');
   renderDashboardStats();
-  const map={dashboard:renderDashboard,classes:renderClasses,students:renderStudents,certs:renderCerts,materials:renderMaterials};
+  const map={dashboard:renderDashboard,classes:renderClasses,students:renderStudents,certs:renderCerts,materials:renderMaterials,records:renderRecords};
   if(map[currentView])map[currentView]();
 }
 
@@ -1949,6 +2014,190 @@ $('matd-delete-btn').addEventListener('click',async()=>{
   await col('materials').doc(currentMatId).delete();
   closeModal('modal-material-detail');
 });
+
+// ============================================================
+// RECORDS
+// ============================================================
+function renderRecords() {
+  const q = $('rec-search').value.toLowerCase().trim();
+  const filtered = allStudents.filter(s =>
+    !q || (s.firstName + ' ' + s.lastName).toLowerCase().includes(q) || (s.email||'').toLowerCase().includes(q)
+  );
+  // Populate year filter
+  const years = new Set();
+  const now = new Date().getFullYear();
+  for (let y = now; y >= now - 5; y--) years.add(String(y));
+  allRoster.forEach(r => { const c = allClasses.find(x => x.id === r.classId); if (c?.date) years.add(c.date.slice(0,4)); });
+  const sel = $('rec-year-filter');
+  const prevVal = sel.value;
+  sel.innerHTML = '<option value="">All Years</option>' + [...years].sort((a,b)=>b-a).map(y => `<option value="${y}">${y}</option>`).join('');
+  if (prevVal) sel.value = prevVal;
+
+  $('records-list').innerHTML = filtered.length ? filtered.map(s => {
+    const classes = allRoster.filter(r => r.studentId === s.id);
+    const completed = classes.filter(r => r.paid).length;
+    return `<div class="stu-card" onclick="openStudentRecords('${s.id}')">
+      <div class="stu-info">
+        <div class="stu-name">${s.firstName} ${s.lastName}</div>
+        <div class="stu-sub">${s.licenseLevel ? `<span class="lv-badge lv-${(s.licenseLevel||'').toLowerCase().replace(/[^a-z]/g,'')}">${s.licenseLevel}</span> ` : ''}${completed} completed class${completed!==1?'es':''}</div>
+      </div>
+      <div style="text-align:right;flex:none">
+        <div style="font-size:12px;color:var(--accent);font-weight:600">📁 View Records</div>
+      </div>
+    </div>`;
+  }).join('') : `<div class="empty"><div class="empty-icon">📁</div><div class="empty-text">No students found</div></div>`;
+}
+
+window.openStudentRecords = async function(studentId) {
+  currentRecordStudentId = studentId;
+  const s = allStudents.find(x => x.id === studentId);
+  if (!s) return;
+  $('sr-title').textContent = `${s.firstName} ${s.lastName}`;
+  $('sr-subtitle').textContent = s.licenseLevel || '';
+  $('sr-upload-err').textContent = '';
+  $('sr-upload-prog').classList.remove('show');
+
+  // Show classes
+  const entries = allRoster.filter(r => r.studentId === studentId);
+  $('sr-classes-list').innerHTML = entries.length ? entries.map(r => {
+    const c = allClasses.find(x => x.id === r.classId) || {};
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div><div style="font-size:13px;font-weight:500">${c.type||'Class'}</div><div style="font-size:11px;color:var(--muted)">${formatDate(c.date)}</div></div>
+      <span class="paid-badge ${r.paid?'paid-y':'paid-n'}">${r.paid?'Completed':'In Progress'}</span>
+    </div>`;
+  }).join('') : '<div style="font-size:13px;color:var(--muted)">No class history</div>';
+
+  openModal('modal-student-records');
+  await loadStudentFiles(studentId);
+};
+
+async function loadStudentFiles(studentId) {
+  $('sr-files-list').innerHTML = '<div class="empty" style="padding:20px 0"><div class="spin"></div></div>';
+  try {
+    const ref = stgRef(`records/${UID}/${studentId}`);
+    const result = await ref.listAll();
+    if (result.items.length === 0) {
+      $('sr-files-list').innerHTML = '<div class="empty" style="padding:20px 0"><div class="empty-text">No files uploaded yet</div></div>';
+      return;
+    }
+    const files = await Promise.all(result.items.map(async item => {
+      const url = await item.getDownloadURL();
+      const meta = await item.getMetadata();
+      return { name: item.name, url, size: meta.size, contentType: meta.contentType, updated: meta.updated };
+    }));
+    files.sort((a,b) => new Date(b.updated) - new Date(a.updated));
+    $('sr-files-list').innerHTML = files.map(f => {
+      const {icon} = fileIcon(f.contentType||'');
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:20px">${icon}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+          <div style="font-size:11px;color:var(--muted)">${fmtBytes(f.size)} · ${formatDate(f.updated?.slice(0,10))}</div>
+        </div>
+        <a href="${f.url}" target="_blank" rel="noopener" class="btn sm" title="Open">↗</a>
+        <button class="btn sm danger" onclick="deleteRecordFile('${studentId}','${f.name}')">×</button>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    $('sr-files-list').innerHTML = `<div style="font-size:13px;color:var(--danger);padding:12px 0">Error loading files: ${e.message}</div>`;
+  }
+}
+
+window.deleteRecordFile = async function(studentId, fileName) {
+  if (!confirm(`Delete "${fileName}"?`)) return;
+  try {
+    await stgRef(`records/${UID}/${studentId}/${fileName}`).delete();
+    await loadStudentFiles(studentId);
+  } catch(e) { alert('Delete failed: ' + e.message); }
+};
+
+$('sr-file-input').addEventListener('change', async function() {
+  const files = Array.from(this.files);
+  if (!files.length || !currentRecordStudentId) return;
+  $('sr-upload-err').textContent = '';
+  for (const file of files) {
+    $('sr-prog-name').textContent = file.name;
+    $('sr-upload-prog').classList.add('show');
+    try {
+      const ref = stgRef(`records/${UID}/${currentRecordStudentId}/${file.name}`);
+      const task = ref.put(file);
+      await new Promise((res, rej) => {
+        task.on('state_changed',
+          snap => {
+            const pct = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
+            $('sr-prog-bar').style.width = pct + '%';
+            $('sr-prog-pct').textContent = pct + '%';
+          },
+          rej, res
+        );
+      });
+    } catch(e) {
+      $('sr-upload-err').textContent = 'Upload failed: ' + e.message;
+      $('sr-upload-prog').classList.remove('show');
+      this.value = '';
+      return;
+    }
+  }
+  $('sr-upload-prog').classList.remove('show');
+  this.value = '';
+  await loadStudentFiles(currentRecordStudentId);
+});
+
+// Drag-and-drop
+(function() {
+  const zone = $('sr-drop-zone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'var(--accent)'; });
+  zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.style.borderColor = '';
+    const dt = new DataTransfer();
+    Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
+    const input = $('sr-file-input');
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change'));
+  });
+})();
+
+// Export all records for a year as a list of download links in a new tab
+$('rec-export-year-btn').addEventListener('click', async function() {
+  const year = $('rec-year-filter').value;
+  this.textContent = 'Loading…'; this.disabled = true;
+  try {
+    const topRef = stgRef(`records/${UID}`);
+    const studentFolders = await topRef.listAll();
+    const rows = [];
+    for (const folder of studentFolders.prefixes) {
+      const sid = folder.name;
+      const s = allStudents.find(x => x.id === sid);
+      const name = s ? `${s.firstName} ${s.lastName}` : sid;
+      const items = await folder.listAll();
+      for (const item of items.items) {
+        const meta = await item.getMetadata();
+        const fileYear = (meta.updated || '').slice(0,4);
+        if (year && fileYear !== year) continue;
+        const url = await item.getDownloadURL();
+        rows.push({ name, file: item.name, url, date: meta.updated?.slice(0,10), size: fmtBytes(meta.size) });
+      }
+    }
+    if (!rows.length) { alert(year ? `No records found for ${year}.` : 'No records found.'); return; }
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Records Export${year?' – '+year:''}</title>
+    <style>body{font-family:system-ui,Arial,sans-serif;font-size:13px;color:#111;padding:20px}
+    h1{font-size:18px;margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:16px}
+    th{background:#1a1a2e;color:#fff;padding:8px 10px;text-align:left;font-size:12px;font-weight:600}
+    td{padding:8px 10px;border-bottom:1px solid #e5e7eb}tr:nth-child(even)td{background:#f9fafb}
+    a{color:#0d9488;font-weight:600}@media print{button{display:none}}</style></head>
+    <body><button onclick="window.print()" style="margin-bottom:16px;padding:8px 18px;background:#1a1a2e;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Print / Save PDF</button>
+    <h1>Student Records Export${year?' – '+year:''}</h1>
+    <div style="font-size:12px;color:#555;margin-bottom:12px">Generated ${new Date().toLocaleString()} · ${rows.length} file${rows.length!==1?'s':''}</div>
+    <table><thead><tr><th>Student</th><th>File</th><th>Date</th><th>Size</th><th>Link</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td>${r.name}</td><td>${r.file}</td><td>${r.date||'—'}</td><td>${r.size}</td><td><a href="${r.url}" target="_blank">Download</a></td></tr>`).join('')}</tbody>
+    </table></body></html>`;
+    const w = window.open('','_blank'); w.document.write(html); w.document.close();
+  } catch(e) { alert('Export failed: ' + e.message); }
+  finally { this.textContent = '⬇ Export Year'; this.disabled = false; }
+});
+
+$('rec-search').addEventListener('input', renderRecords);
 
 // ============================================================
 // OPT-GROUP INIT

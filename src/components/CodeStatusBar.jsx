@@ -26,13 +26,17 @@ export default function CodeStatusBar() {
     return () => clearInterval(id)
   }, [])
 
-  // Metronome: fire clicks while CPR is active
+  const [beatFlash, setBeatFlash] = useState(false)
+
+  // Metronome: fire clicks + visual flash while CPR is active
   useEffect(() => {
-    if (!cpr.active || !metronomeOn) return
+    if (!cpr.active || !metronomeOn) { setBeatFlash(false); return }
     beatRef.current = 0
     const interval = 60000 / METRONOME_BPM
     const id = setInterval(() => {
-      playMetronomeClick(beatRef.current % 30 === 0) // accent every ~16s
+      playMetronomeClick(beatRef.current % 30 === 0)
+      setBeatFlash(true)
+      setTimeout(() => setBeatFlash(false), interval * 0.35)
       beatRef.current++
     }, interval)
     return () => clearInterval(id)
@@ -110,6 +114,17 @@ export default function CodeStatusBar() {
         >
           ■ PAUSE CPR
         </button>
+      )}
+
+      {/* Visual beat flash */}
+      {cpr.active && metronomeOn && (
+        <div className={`flex items-center justify-center w-12 min-h-[44px] rounded border-2 font-bold text-lg transition-all duration-75 ${
+          beatFlash
+            ? 'border-ecg-green bg-ecg-green text-black scale-105'
+            : 'border-ecg-green/40 bg-surface2 text-ecg-green/40'
+        }`}>
+          ↓
+        </div>
       )}
 
       {/* Cycle timer */}
