@@ -58,6 +58,15 @@ export default function ACLSSimulator() {
       <header className="flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 bg-surface border-b border-ecg-border shrink-0 flex-wrap">
         {/* Left cluster */}
         <div className="flex items-center gap-2 order-2 sm:order-1">
+          {window.opener && (
+            <button
+              onClick={() => window.close()}
+              className="flex items-center gap-1 px-2.5 min-h-[40px] text-[11px] font-bold font-mono rounded-lg border border-ecg-border text-ecg-gray bg-surface2 hover:text-ink hover:border-ecg-gray active:scale-95 transition-all uppercase tracking-widest"
+              title="Close and return to Class Manager"
+            >
+              ← CM
+            </button>
+          )}
           <button
             onClick={() => dispatch({ type: 'TOGGLE_INSTRUCTOR' })}
             className="flex items-center gap-2 px-3 min-h-[40px] rounded-lg bg-surface2 border border-ecg-border text-ecg-gray hover:text-ink hover:border-ecg-green active:scale-95 transition-all text-xs font-bold uppercase tracking-widest"
