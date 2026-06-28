@@ -1,5 +1,6 @@
-import { createContext, useContext, useReducer } from 'react'
+import { createContext, useContext, useReducer, useEffect, useRef } from 'react'
 import { RHYTHMS } from '../data/rhythms'
+import { loadLiveState, saveLiveState } from '../utils/livePersist'
 
 const Ctx = createContext(null)
 
@@ -264,7 +265,31 @@ function reducer(state, action) {
 }
 
 export function SimulatorProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, initialState)
+  // Lazily restore the last live session from localStorage on mount.
+  const [state, dispatch] = useReducer(reducer, initialState, loadLiveState)
+
+  const stateRef = useRef(state)
+  stateRef.current = state
+
+  // Debounced auto-save on every change so the session is continuously cached.
+  useEffect(() => {
+    const id = setTimeout(() => saveLiveState(state), 400)
+    return () => clearTimeout(id)
+  }, [state])
+
+  // Guaranteed flush the moment the app is hidden or closed, so nothing pending
+  // in the debounce window is lost.
+  useEffect(() => {
+    const flush = () => saveLiveState(stateRef.current)
+    const onHide = () => { if (document.visibilityState === 'hidden') flush() }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onHide)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', onHide)
+    }
+  }, [])
+
   return <Ctx.Provider value={{ state, dispatch }}>{children}</Ctx.Provider>
 }
 
