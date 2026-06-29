@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import { saveSession, loadSessions, deleteSession, usingCloud } from '../utils/sessionStore'
-import { causeLabel } from '../data/reversibleCauses'
+import { useContent } from '../context/ContentContext'
 import { computeMetrics, fmtSec } from '../utils/metrics'
 
 function fmtClock(sec) {
@@ -50,7 +50,7 @@ function buildPayload(state, teamMembers, notes) {
 
 // ── HTML Report Export ────────────────────────────────────────────────────────
 
-function downloadHTML(sessions) {
+function downloadHTML(sessions, causeLabel) {
   const exportDate = new Date().toLocaleString([], {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
@@ -392,6 +392,7 @@ function esc(str) {
 
 export default function SessionsModal({ onClose }) {
   const { state } = useSimulator()
+  const { causeLabel } = useContent()
   const [tab, setTab] = useState('save')
   const [teamMembers, setTeamMembers] = useState([''])
   const [notes, setNotes] = useState('')
@@ -607,7 +608,7 @@ function BrowseTab({ sessions, loading, selected, setSelected, onDelete }) {
           {sessions.length} session{sessions.length !== 1 ? 's' : ''}
         </span>
         <button
-          onClick={() => downloadHTML(sessions)}
+          onClick={() => downloadHTML(sessions, causeLabel)}
           className="text-[10px] font-bold text-ecg-green border border-ecg-green/50 rounded px-2.5 py-1 hover:bg-ecg-green/10 transition-colors uppercase tracking-widest"
         >
           Export Report

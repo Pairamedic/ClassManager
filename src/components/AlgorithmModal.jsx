@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ALGORITHMS } from '../data/algorithms'
+import { useContent } from '../context/ContentContext'
 
 const ACCENT = {
   red: 'text-ecg-red border-ecg-red',
@@ -9,6 +9,7 @@ const ACCENT = {
 }
 
 export default function AlgorithmModal({ onClose }) {
+  const { algorithms: ALGORITHMS } = useContent()
   const [active, setActive] = useState(ALGORITHMS[0].id)
   const algo = ALGORITHMS.find(a => a.id === active)
 

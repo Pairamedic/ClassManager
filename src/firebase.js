@@ -1,7 +1,8 @@
 import { initializeApp, getApps } from 'firebase/app'
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
 import {
   getFirestore, collection, addDoc, getDocs,
-  deleteDoc, doc, query, orderBy,
+  deleteDoc, doc, query, orderBy, where,
 } from 'firebase/firestore'
 import {
   getAuth,
@@ -24,8 +25,21 @@ const cfg = {
 
 export const firebaseReady = !!(cfg.apiKey && cfg.projectId)
 
+// reCAPTCHA v3 site key for App Check. When set, only requests originating
+// from the real, attested app are accepted by Firebase — a clone that copies
+// the public Firebase config cannot talk to this backend.
+const appCheckKey = import.meta.env.VITE_FIREBASE_APPCHECK_KEY || ''
+
 function getApp() {
-  return getApps().length ? getApps()[0] : initializeApp(cfg)
+  if (getApps().length) return getApps()[0]
+  const app = initializeApp(cfg)
+  if (appCheckKey) {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(appCheckKey),
+      isTokenAutoRefreshEnabled: true,
+    })
+  }
+  return app
 }
 
 let _db = null
@@ -40,6 +54,15 @@ function auth() {
   if (!firebaseReady) throw new Error('Firebase not configured')
   if (!_auth) _auth = getAuth(getApp())
   return _auth
+}
+
+// Resolve the signed-in user's uid, or throw. Every stored document is scoped
+// to its owner, so writes/reads without an authenticated user are rejected
+// here before they ever reach Firestore (where the rules would reject them too).
+function requireUid() {
+  const u = auth().currentUser
+  if (!u) throw new Error('You must be signed in to do that.')
+  return u.uid
 }
 
 // ── Auth ──────────────────────────────────────────────────
@@ -62,42 +85,75 @@ export async function signOut() {
   return fbSignOut(auth())
 }
 
+// ── Shared content catalog ────────────────────────────────
+// The scenario / algorithm / reversible-cause catalog lives server-side in the
+// `acls_content` collection instead of the JS bundle, so a clone that copies
+// the front-end ships with no content. Readable by any signed-in user;
+// writable only out-of-band by the seed script (see scripts/seed-content.mjs).
+export async function fbLoadContent() {
+  requireUid()
+  // One round trip for the whole catalog (a handful of small docs). Note: the
+  // Firestore modular SDK pulls its full sync engine into the bundle (~40 kB
+  // gzipped) once content is fetched this way — acceptable for a cached PWA and
+  // useful for offline. Revisit with the REST API or a lite client if size matters.
+  const snap = await getDocs(query(collection(db(), 'acls_content')))
+  const out = {}
+  snap.forEach(d => { out[d.id] = d.data() })
+  return out
+}
+
 // ── Scenario storage ──────────────────────────────────────
 export async function fbSaveScenario(payload) {
+  const uid = requireUid()
   const ref = await addDoc(collection(db(), 'acls_scenarios'), {
     ...payload,
+    uid,
     savedAt: Date.now(),
   })
   return ref.id
 }
 
 export async function fbLoadScenarios() {
+  const uid = requireUid()
   const snap = await getDocs(
-    query(collection(db(), 'acls_scenarios'), orderBy('savedAt', 'desc'))
+    query(
+      collection(db(), 'acls_scenarios'),
+      where('uid', '==', uid),
+      orderBy('savedAt', 'desc'),
+    )
   )
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
 }
 
 export async function fbDeleteScenario(id) {
+  requireUid()
   await deleteDoc(doc(db(), 'acls_scenarios', id))
 }
 
 // ── Student simulation sessions ───────────────────────────
 export async function fbSaveSession(payload) {
+  const uid = requireUid()
   const ref = await addDoc(collection(db(), 'acls_sessions'), {
     ...payload,
+    uid,
     savedAt: Date.now(),
   })
   return ref.id
 }
 
 export async function fbLoadSessions() {
+  const uid = requireUid()
   const snap = await getDocs(
-    query(collection(db(), 'acls_sessions'), orderBy('savedAt', 'desc'))
+    query(
+      collection(db(), 'acls_sessions'),
+      where('uid', '==', uid),
+      orderBy('savedAt', 'desc'),
+    )
   )
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
 }
 
 export async function fbDeleteSession(id) {
+  requireUid()
   await deleteDoc(doc(db(), 'acls_sessions', id))
 }

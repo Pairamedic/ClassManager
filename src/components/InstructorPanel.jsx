@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import { RHYTHM_LIST } from '../data/rhythms'
-import { SCENARIOS, SCENARIO_GROUPS } from '../data/scenarios'
-import { REVERSIBLE_CAUSES } from '../data/reversibleCauses'
+import { useContent } from '../context/ContentContext'
 import { firebaseReady, fbSaveScenario, fbLoadScenarios, fbDeleteScenario } from '../firebase'
 
 // ── Scenario parser ───────────────────────────────────────────────────────────
@@ -113,6 +112,7 @@ const RHYTHM_GROUPS = [
 
 export default function InstructorPanel({ onEndSession }) {
   const { state, dispatch } = useSimulator()
+  const { scenarios: SCENARIOS, scenarioGroups: SCENARIO_GROUPS, reversibleCauses: REVERSIBLE_CAUSES } = useContent()
   const [cloudScenarios, setCloudScenarios] = useState([])
   const [saveName, setSaveName] = useState('')
   const [fbStatus, setFbStatus] = useState('')

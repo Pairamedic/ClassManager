@@ -1,5 +1,5 @@
 import { useSimulator } from '../context/SimulatorContext'
-import { causeLabel } from '../data/reversibleCauses'
+import { useContent } from '../context/ContentContext'
 import { computeMetrics, fmtSec } from '../utils/metrics'
 
 function fmt(ms, base) {
@@ -9,6 +9,7 @@ function fmt(ms, base) {
 
 export default function PrintSummary({ onClose }) {
   const { state } = useSimulator()
+  const { causeLabel } = useContent()
   const now = Date.now()
   const metrics = computeMetrics(state, now)
 

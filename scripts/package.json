@@ -1,0 +1,13 @@
+{
+  "name": "cm-simulator-seed",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Dev-only content seeding for CM Simulator. Isolated from the app so firebase-admin never enters the web bundle's dependency tree.",
+  "scripts": {
+    "seed": "node seed-content.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}
