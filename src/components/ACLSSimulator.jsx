@@ -15,7 +15,6 @@ import InstructorPanel from './InstructorPanel'
 import PrintSummary from './PrintSummary'
 import AlgorithmModal from './AlgorithmModal'
 import SessionsModal from './SessionsModal'
-import GradebookModal from './GradebookModal'
 import ThemeToggle from './ThemeToggle'
 
 function HeaderButton({ onClick, children }) {
@@ -47,7 +46,6 @@ export default function ACLSSimulator() {
   const [showPrint, setShowPrint] = useState(false)
   const [showAlgos, setShowAlgos] = useState(false)
   const [showSessions, setShowSessions] = useState(false)
-  const [showGradebook, setShowGradebook] = useState(false)
   const [showPowerOff, setShowPowerOff] = useState(false)
 
   return (
@@ -78,7 +76,6 @@ export default function ACLSSimulator() {
           )}
           <HeaderButton onClick={() => setShowAlgos(true)}>Algorithms</HeaderButton>
           <HeaderButton onClick={() => setShowSessions(true)}>Sessions</HeaderButton>
-          <HeaderButton onClick={() => setShowGradebook(true)}>Gradebook</HeaderButton>
         </div>
 
         <div className="flex items-center gap-2 min-w-0 order-1 sm:order-2">
@@ -164,7 +161,6 @@ export default function ACLSSimulator() {
       {showPrint     && <PrintSummary    onClose={() => setShowPrint(false)} />}
       {showAlgos     && <AlgorithmModal  onClose={() => setShowAlgos(false)} />}
       {showSessions  && <SessionsModal   onClose={() => setShowSessions(false)} />}
-      {showGradebook && <GradebookModal  onClose={() => setShowGradebook(false)} />}
       {showPowerOff && (
         <PowerOffDialog
           state={state}

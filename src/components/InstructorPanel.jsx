@@ -4,6 +4,7 @@ import { RHYTHM_LIST } from '../data/rhythms'
 import { SCENARIOS, SCENARIO_GROUPS } from '../data/scenarios'
 import { REVERSIBLE_CAUSES } from '../data/reversibleCauses'
 import { firebaseReady, fbSaveScenario, fbLoadScenarios, fbDeleteScenario } from '../firebase'
+import StudentsPanel from './StudentsPanel'
 
 // ── Scenario parser ───────────────────────────────────────────────────────────
 const RHYTHM_ALIASES = {
@@ -191,6 +192,11 @@ export default function InstructorPanel({ onEndSession }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
+
+          {/* STUDENTS & GRADEBOOK */}
+          <CollapsibleSection title="Students & Gradebook">
+            <StudentsPanel />
+          </CollapsibleSection>
 
           {/* QUICK SCENARIOS — grouped by AHA category */}
           <CollapsibleSection title="Quick Scenarios">
