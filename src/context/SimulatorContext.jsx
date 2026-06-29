@@ -46,6 +46,7 @@ export const initialState = {
   codeStartTime: null,
   instructorOpen: false,
   scenarioName: null,
+  pendingScenarioIntro: null,
 }
 
 function logEvent(state, entry) {
@@ -238,6 +239,7 @@ function reducer(state, action) {
         rhythmHistory: [{ rhythm: state.currentRhythm, time: Date.now() }],
         eventLog: [],
         codeStartTime: null,
+        pendingScenarioIntro: null,
       }
 
     case 'LOAD_SCENARIO':
@@ -246,6 +248,7 @@ function reducer(state, action) {
         currentRhythm: action.scenario.rhythm,
         vitals: { ...state.vitals, ...action.scenario.vitals },
         vitalsHidden: action.scenario.vitalsHidden ?? false,
+        labelHidden: true,
         scenarioName: action.scenario.name,
         defib: { ...initialState.defib },
         pacer: { ...initialState.pacer, captureThreshold: action.scenario.captureThreshold ?? 60 },
@@ -257,6 +260,15 @@ function reducer(state, action) {
         codeStartTime: null,
         rhythmHistory: [{ rhythm: action.scenario.rhythm, time: Date.now() }],
         eventLog: [{ time: Date.now(), type: 'scenario', label: 'Scenario loaded', detail: action.scenario.name }],
+        pendingScenarioIntro: { name: action.scenario.name, description: action.scenario.description || '' },
+      }
+
+    case 'CONFIRM_SCENARIO_INTRO':
+      return {
+        ...state,
+        pendingScenarioIntro: null,
+        codeStartTime: Date.now(),
+        eventLog: logEvent(state, { type: 'code', label: 'Session started' }),
       }
 
     default:

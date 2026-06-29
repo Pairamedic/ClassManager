@@ -133,10 +133,46 @@ export default function ACLSSimulator() {
 
       </div>
 
-      {state.instructorOpen && <InstructorPanel />}
+      {state.instructorOpen && (
+        <InstructorPanel
+          onEndSession={() => {
+            dispatch({ type: 'TOGGLE_INSTRUCTOR' })
+            setShowSessions(true)
+          }}
+        />
+      )}
       {showPrint    && <PrintSummary   onClose={() => setShowPrint(false)} />}
       {showAlgos    && <AlgorithmModal onClose={() => setShowAlgos(false)} />}
       {showSessions && <SessionsModal  onClose={() => setShowSessions(false)} />}
+
+      {state.pendingScenarioIntro && (
+        <ScenarioIntroModal
+          intro={state.pendingScenarioIntro}
+          onBegin={() => dispatch({ type: 'CONFIRM_SCENARIO_INTRO' })}
+        />
+      )}
+    </div>
+  )
+}
+
+function ScenarioIntroModal({ intro, onBegin }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/85">
+      <div className="bg-surface border border-ecg-border rounded-2xl shadow-2xl max-w-md w-full p-8 flex flex-col gap-6">
+        <div className="text-center space-y-3">
+          <div className="text-[10px] text-ecg-green font-mono uppercase tracking-widest">Incoming Scenario</div>
+          <h2 className="text-xl font-bold text-ink">{intro.name}</h2>
+          {intro.description && (
+            <p className="text-base text-ecg-gray leading-relaxed">{intro.description}</p>
+          )}
+        </div>
+        <button
+          onClick={onBegin}
+          className="w-full min-h-[52px] rounded-xl font-bold text-sm uppercase tracking-widest border-2 border-ecg-green text-ecg-green bg-surface2 hover:bg-ecg-green hover:text-black active:scale-95 transition-all"
+        >
+          Begin
+        </button>
+      </div>
     </div>
   )
 }

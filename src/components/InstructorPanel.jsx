@@ -30,7 +30,7 @@ const RHYTHM_GROUPS = [
   { label: 'Non-Shockable Arrest',    cat: 'noshock' },
 ]
 
-export default function InstructorPanel() {
+export default function InstructorPanel({ onEndSession }) {
   const { state, dispatch } = useSimulator()
   const [cloudScenarios, setCloudScenarios] = useState([])
   const [saveName, setSaveName] = useState('')
@@ -88,16 +88,39 @@ export default function InstructorPanel() {
       <div className="absolute inset-0 bg-black/60" />
 
       <div className="relative z-10 flex flex-col bg-surface border-r border-ecg-border" style={{ width: 380 }}>
+
+        {/* Panel header */}
         <div className="flex items-center justify-between p-3 border-b border-ecg-border bg-surface2 shrink-0">
           <h2 className="text-sm font-bold text-ink tracking-widest uppercase">Instructor Controls</h2>
           <button onClick={close} className="text-ecg-gray hover:text-ink text-xl leading-none">×</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-5">
+        {/* Quick actions — always visible, never inside a collapsible */}
+        <div className="flex gap-2 px-3 py-2.5 border-b border-ecg-border shrink-0">
+          <button
+            onClick={() => dispatch({ type: 'TOGGLE_LABEL_HIDDEN' })}
+            className={`flex-1 min-h-[40px] rounded-lg border font-bold text-xs uppercase tracking-widest transition-colors ${
+              state.labelHidden
+                ? 'border-ecg-green text-ecg-green bg-ecg-green/10 hover:bg-ecg-green/20'
+                : 'border-ecg-amber text-ecg-amber bg-ecg-amber/10 hover:bg-ecg-amber/20'
+            }`}
+          >
+            {state.labelHidden ? 'Reveal Rhythm' : 'Hide Rhythm'}
+          </button>
+          {onEndSession && (
+            <button
+              onClick={onEndSession}
+              className="flex-1 min-h-[40px] rounded-lg border border-ecg-red/60 text-ecg-red bg-ecg-red/5 hover:bg-ecg-red/20 font-bold text-xs uppercase tracking-widest transition-colors"
+            >
+              End Session
+            </button>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
 
           {/* QUICK SCENARIOS */}
-          <section>
-            <SectionLabel>Quick Scenarios</SectionLabel>
+          <CollapsibleSection title="Quick Scenarios">
             <div className="grid grid-cols-2 gap-1">
               {SCENARIOS.map(sc => (
                 <button
@@ -110,12 +133,11 @@ export default function InstructorPanel() {
                 </button>
               ))}
             </div>
-          </section>
+          </CollapsibleSection>
 
           {/* CLOUD SCENARIOS */}
           {firebaseReady && (
-            <section>
-              <SectionLabel>Cloud Scenarios</SectionLabel>
+            <CollapsibleSection title="Cloud Scenarios">
               <div className="flex gap-1.5 mb-2">
                 <input
                   type="text"
@@ -133,9 +155,7 @@ export default function InstructorPanel() {
                   {fbLoading ? '…' : 'SAVE'}
                 </button>
               </div>
-              {fbStatus && (
-                <p className="text-[9px] text-ecg-amber mb-2">{fbStatus}</p>
-              )}
+              {fbStatus && <p className="text-[9px] text-ecg-amber mb-2">{fbStatus}</p>}
               <div className="space-y-1 max-h-32 overflow-y-auto">
                 {cloudScenarios.length === 0 ? (
                   <p className="text-[9px] text-ecg-gray">No saved scenarios</p>
@@ -153,12 +173,11 @@ export default function InstructorPanel() {
                   </div>
                 ))}
               </div>
-            </section>
+            </CollapsibleSection>
           )}
 
           {/* RHYTHM SELECTOR */}
-          <section>
-            <SectionLabel>Rhythm</SectionLabel>
+          <CollapsibleSection title="Rhythm">
             {RHYTHM_GROUPS.map(({ label, cat }) => {
               const rhythms = RHYTHM_LIST.filter(r => r.category === cat)
               return (
@@ -182,11 +201,10 @@ export default function InstructorPanel() {
                 </div>
               )
             })}
-          </section>
+          </CollapsibleSection>
 
           {/* VITALS EDITOR */}
-          <section>
-            <SectionLabel>Vitals</SectionLabel>
+          <CollapsibleSection title="Vitals">
             {VITALS_FIELDS.map(f => (
               <div key={f.key} className="flex items-center gap-2 py-1 border-b border-ecg-border/40">
                 <span className="text-[10px] text-ecg-gray font-mono w-12 uppercase shrink-0">{f.label}</span>
@@ -201,21 +219,18 @@ export default function InstructorPanel() {
                 </span>
               </div>
             ))}
-          </section>
+          </CollapsibleSection>
 
           {/* DISPLAY TOGGLES */}
-          <section>
-            <SectionLabel>Display</SectionLabel>
+          <CollapsibleSection title="Display">
             <div className="flex flex-col gap-1">
-              <Toggle label="Hide Vitals from Student" value={state.vitalsHidden}  onToggle={() => dispatch({ type: 'TOGGLE_VITALS_HIDDEN' })} />
-              <Toggle label="Hide Rhythm Label"        value={state.labelHidden}   onToggle={() => dispatch({ type: 'TOGGLE_LABEL_HIDDEN' })} />
-              <Toggle label="Pause Waveform"           value={!state.isRunning}    onToggle={() => dispatch({ type: 'SET_RUNNING', value: !state.isRunning })} />
+              <Toggle label="Hide Vitals from Student" value={state.vitalsHidden} onToggle={() => dispatch({ type: 'TOGGLE_VITALS_HIDDEN' })} />
+              <Toggle label="Pause Waveform"           value={!state.isRunning}   onToggle={() => dispatch({ type: 'SET_RUNNING', value: !state.isRunning })} />
             </div>
-          </section>
+          </CollapsibleSection>
 
           {/* CODE OUTCOME */}
-          <section>
-            <SectionLabel>Code Outcome</SectionLabel>
+          <CollapsibleSection title="Code Outcome">
             <button
               onClick={() => dispatch({ type: 'DECLARE_ROSC' })}
               disabled={state.rosc}
@@ -230,11 +245,10 @@ export default function InstructorPanel() {
             <p className="text-[9px] text-ecg-gray mt-1">
               Restores a perfusing rhythm and post-arrest vitals; prompts post-arrest care.
             </p>
-          </section>
+          </CollapsibleSection>
 
           {/* REVERSIBLE CAUSES (H's & T's) */}
-          <section>
-            <SectionLabel>Reversible Causes (H’s &amp; T’s)</SectionLabel>
+          <CollapsibleSection title="Reversible Causes (H's & T's)">
             <p className="text-[9px] text-ecg-gray mb-2">
               Flag the cause(s) present in this scenario — shown in the debrief / saved session.
             </p>
@@ -261,11 +275,10 @@ export default function InstructorPanel() {
                 )
               })}
             </div>
-          </section>
+          </CollapsibleSection>
 
-          {/* CAPTURE THRESHOLD */}
-          <section>
-            <SectionLabel>Pacer Capture Threshold</SectionLabel>
+          {/* PACER CAPTURE THRESHOLD */}
+          <CollapsibleSection title="Pacer Capture Threshold">
             <div className="flex items-center gap-2">
               <input
                 type="range" min={0} max={200} step={5}
@@ -280,7 +293,7 @@ export default function InstructorPanel() {
             <p className="text-[9px] text-ecg-gray mt-1">
               Pacer output must exceed this value for capture. Increase for harder scenarios.
             </p>
-          </section>
+          </CollapsibleSection>
 
         </div>
       </div>
@@ -288,9 +301,19 @@ export default function InstructorPanel() {
   )
 }
 
-function SectionLabel({ children }) {
+function CollapsibleSection({ title, children }) {
+  const [open, setOpen] = useState(false)
   return (
-    <div className="text-[10px] text-ecg-green font-mono uppercase tracking-widest mb-2">{children}</div>
+    <section className="border border-ecg-border/60 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-surface2 hover:bg-surface transition-colors"
+      >
+        <span className="text-[10px] text-ecg-green font-mono uppercase tracking-widest">{title}</span>
+        <span className="text-ecg-gray text-[10px] font-mono">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && <div className="p-3">{children}</div>}
+    </section>
   )
 }
 
