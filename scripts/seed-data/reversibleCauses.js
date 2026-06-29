@@ -11,7 +11,3 @@ export const REVERSIBLE_CAUSES = [
   { id: 'thrombosis_pe', group: 'T', label: 'Thrombosis — pulmonary (PE)' },
   { id: 'thrombosis_mi', group: 'T', label: 'Thrombosis — coronary (MI)' },
 ]
-
-export function causeLabel(id) {
-  return REVERSIBLE_CAUSES.find(c => c.id === id)?.label || id
-}

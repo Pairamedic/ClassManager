@@ -1,5 +1,6 @@
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { SimulatorProvider } from './context/SimulatorContext'
+import { ContentProvider } from './context/ContentContext'
 import ACLSSimulator from './components/ACLSSimulator'
 import LoginPage from './components/LoginPage'
 import UpdatePrompt from './components/UpdatePrompt'
@@ -21,7 +22,9 @@ function AppInner() {
 
   return (
     <SimulatorProvider>
-      <ACLSSimulator />
+      <ContentProvider>
+        <ACLSSimulator />
+      </ContentProvider>
     </SimulatorProvider>
   )
 }

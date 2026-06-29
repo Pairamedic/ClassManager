@@ -85,6 +85,23 @@ export async function signOut() {
   return fbSignOut(auth())
 }
 
+// ── Shared content catalog ────────────────────────────────
+// The scenario / algorithm / reversible-cause catalog lives server-side in the
+// `acls_content` collection instead of the JS bundle, so a clone that copies
+// the front-end ships with no content. Readable by any signed-in user;
+// writable only out-of-band by the seed script (see scripts/seed-content.mjs).
+export async function fbLoadContent() {
+  requireUid()
+  // One round trip for the whole catalog (a handful of small docs). Note: the
+  // Firestore modular SDK pulls its full sync engine into the bundle (~40 kB
+  // gzipped) once content is fetched this way — acceptable for a cached PWA and
+  // useful for offline. Revisit with the REST API or a lite client if size matters.
+  const snap = await getDocs(query(collection(db(), 'acls_content')))
+  const out = {}
+  snap.forEach(d => { out[d.id] = d.data() })
+  return out
+}
+
 // ── Scenario storage ──────────────────────────────────────
 export async function fbSaveScenario(payload) {
   const uid = requireUid()
