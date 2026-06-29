@@ -15,11 +15,13 @@ function relTime(base, t) {
   return base ? fmtClock((t - base) / 1000) : '—'
 }
 
-function buildPayload(state, studentName, notes) {
+function buildPayload(state, teamMembers, notes) {
+  const filtered = teamMembers.filter(n => n.trim())
   const start = state.codeStartTime ?? (state.eventLog[0]?.time ?? Date.now())
   const durationSec = Math.round((Date.now() - start) / 1000)
   return {
-    studentName: studentName.trim(),
+    studentName: filtered[0] || '',
+    teamMembers: filtered,
     notes: notes.trim(),
     scenarioName: state.scenarioName || null,
     finalRhythm: state.currentRhythm,
@@ -37,10 +39,50 @@ function buildPayload(state, studentName, notes) {
   }
 }
 
+function downloadCSV(sessions) {
+  const headers = [
+    'Date', 'Students', 'Scenario', 'Final Rhythm', 'Duration',
+    'ROSC', 'Shocks', 'CPR Cycles',
+    'Time to CPR', 'Time to 1st Shock', 'Time to 1st Epi', 'CPR Fraction %',
+    'Interruptions', 'Notes',
+  ]
+  const rows = sessions.map(s => {
+    const members = (s.teamMembers?.filter(Boolean) || (s.studentName ? [s.studentName] : [])).join('; ')
+    return [
+      fmtDate(s.savedAt),
+      members,
+      s.scenarioName || '—',
+      s.finalRhythm || '—',
+      fmtClock(s.durationSec || 0),
+      s.rosc ? 'Yes' : 'No',
+      s.shocks ?? 0,
+      s.cprCycles ?? 0,
+      fmtSec(s.metrics?.timeToCompression),
+      fmtSec(s.metrics?.timeToShock),
+      fmtSec(s.metrics?.timeToEpi),
+      s.metrics?.cprFractionPct != null ? s.metrics.cprFractionPct : '—',
+      s.metrics?.interruptions ?? '—',
+      s.notes || '',
+    ]
+  })
+  const csv = [headers, ...rows]
+    .map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `acls-sessions-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
 export default function SessionsModal({ onClose }) {
   const { state } = useSimulator()
   const [tab, setTab] = useState('save')
-  const [studentName, setStudentName] = useState('')
+  const [teamMembers, setTeamMembers] = useState([''])
   const [notes, setNotes] = useState('')
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
@@ -58,17 +100,20 @@ export default function SessionsModal({ onClose }) {
   useEffect(() => { refresh() }, [])
 
   const knownStudents = useMemo(
-    () => [...new Set(sessions.map(s => s.studentName).filter(Boolean))],
+    () => [...new Set(
+      sessions.flatMap(s => s.teamMembers?.filter(Boolean) || (s.studentName ? [s.studentName] : []))
+    )],
     [sessions]
   )
 
   async function handleSave() {
-    if (!studentName.trim()) { setStatus('Enter a student name first.'); return }
+    if (!teamMembers[0]?.trim()) { setStatus('Enter at least one student name.'); return }
     setBusy(true); setStatus('')
     try {
-      await saveSession(buildPayload(state, studentName, notes))
+      await saveSession(buildPayload(state, teamMembers, notes))
       setStatus('Session saved.')
       setNotes('')
+      setTeamMembers([''])
       await refresh()
     } catch (e) {
       setStatus('Save failed: ' + e.message)
@@ -76,8 +121,11 @@ export default function SessionsModal({ onClose }) {
   }
 
   async function handleDelete(id) {
-    try { await deleteSession(id); if (selected?.id === id) setSelected(null); await refresh() }
-    catch (e) { setStatus('Delete failed: ' + e.message) }
+    try {
+      await deleteSession(id)
+      if (selected?.id === id) setSelected(null)
+      await refresh()
+    } catch (e) { setStatus('Delete failed: ' + e.message) }
   }
 
   const tabCls = (t) => `flex-1 min-h-[44px] rounded-lg border text-xs font-bold uppercase tracking-wide transition-colors ${
@@ -103,14 +151,18 @@ export default function SessionsModal({ onClose }) {
         {/* Tabs */}
         <div className="flex gap-1.5 p-3 shrink-0">
           <button className={tabCls('save')} onClick={() => setTab('save')}>Save Current</button>
-          <button className={tabCls('browse')} onClick={() => setTab('browse')}>Browse{sessions.length ? ` (${sessions.length})` : ''}</button>
+          <button className={tabCls('browse')} onClick={() => setTab('browse')}>
+            Browse{sessions.length ? ` (${sessions.length})` : ''}
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pb-4">
           {tab === 'save' ? (
             <SaveTab
-              state={state} studentName={studentName} setStudentName={setStudentName}
-              notes={notes} setNotes={setNotes} knownStudents={knownStudents}
+              state={state}
+              teamMembers={teamMembers} setTeamMembers={setTeamMembers}
+              notes={notes} setNotes={setNotes}
+              knownStudents={knownStudents}
               onSave={handleSave} busy={busy} status={status}
             />
           ) : (
@@ -134,37 +186,73 @@ function Field({ label, children }) {
   )
 }
 
-function SaveTab({ state, studentName, setStudentName, notes, setNotes, knownStudents, onSave, busy, status }) {
+function SaveTab({ state, teamMembers, setTeamMembers, notes, setNotes, knownStudents, onSave, busy, status }) {
   const start = state.codeStartTime ?? (state.eventLog[0]?.time)
   const dur = start ? Math.round((Date.now() - start) / 1000) : 0
 
+  function updateMember(i, val) {
+    setTeamMembers(prev => prev.map((n, j) => j === i ? val : n))
+  }
+  function addMember() {
+    setTeamMembers(prev => [...prev, ''])
+  }
+  function removeMember(i) {
+    setTeamMembers(prev => prev.filter((_, j) => j !== i))
+  }
+
   return (
     <div className="space-y-4">
+
+      {/* Team Members */}
       <div>
-        <label className="text-[10px] text-ecg-green font-mono uppercase tracking-widest">Student</label>
-        <input
-          list="known-students"
-          value={studentName}
-          onChange={e => setStudentName(e.target.value)}
-          placeholder="Student name…"
-          className="mt-1 w-full bg-surface2 border border-ecg-border rounded-lg px-3 min-h-[44px] text-sm text-ink placeholder-ecg-gray focus:outline-none focus:border-ecg-green"
-        />
+        <label className="text-[10px] text-ecg-green font-mono uppercase tracking-widest">
+          Team Members
+        </label>
+        <div className="mt-1 space-y-1.5">
+          {teamMembers.map((name, i) => (
+            <div key={i} className="flex gap-1.5 items-center">
+              <input
+                list="known-students"
+                value={name}
+                onChange={e => updateMember(i, e.target.value)}
+                placeholder={i === 0 ? 'Student name…' : `Member ${i + 1}…`}
+                className="flex-1 bg-surface2 border border-ecg-border rounded-lg px-3 min-h-[44px] text-sm text-ink placeholder-ecg-gray focus:outline-none focus:border-ecg-green"
+              />
+              {i > 0 && (
+                <button
+                  onClick={() => removeMember(i)}
+                  className="text-ecg-gray hover:text-ecg-red text-xl leading-none px-2 min-h-[44px]"
+                >×</button>
+              )}
+            </div>
+          ))}
+        </div>
+        {teamMembers.length < 6 && (
+          <button
+            onClick={addMember}
+            className="mt-1.5 text-[11px] font-bold text-ecg-green/70 hover:text-ecg-green transition-colors"
+          >
+            + Add Member
+          </button>
+        )}
         <datalist id="known-students">
           {knownStudents.map(n => <option key={n} value={n} />)}
         </datalist>
       </div>
 
+      {/* Notes */}
       <div>
         <label className="text-[10px] text-ecg-green font-mono uppercase tracking-widest">Instructor Notes</label>
         <textarea
           value={notes}
           onChange={e => setNotes(e.target.value)}
-          rows={4}
+          rows={3}
           placeholder="Debrief notes, performance, areas to improve…"
           className="mt-1 w-full bg-surface2 border border-ecg-border rounded-lg px-3 py-2 text-sm text-ink placeholder-ecg-gray focus:outline-none focus:border-ecg-green resize-none"
         />
       </div>
 
+      {/* Session Summary */}
       <div>
         <label className="text-[10px] text-ecg-green font-mono uppercase tracking-widest">This Session</label>
         <div className="mt-1">
@@ -173,7 +261,11 @@ function SaveTab({ state, studentName, setStudentName, notes, setNotes, knownStu
           <Field label="Duration">{fmtClock(dur)}</Field>
           <Field label="Shocks">{state.defib.shocksDelivered}</Field>
           <Field label="CPR cycles">{state.cpr.cycleCount}</Field>
-          <Field label="ROSC">{state.rosc ? `Yes (${state.roscTime && start ? fmtClock((state.roscTime - start) / 1000) : '—'})` : 'No'}</Field>
+          <Field label="ROSC">
+            {state.rosc
+              ? `Yes (${state.roscTime && start ? fmtClock((state.roscTime - start) / 1000) : '—'})`
+              : 'No'}
+          </Field>
           <Field label="Medications">{state.medications.length}</Field>
           <Field label="Causes flagged">
             {state.reversibleCauses.length ? state.reversibleCauses.map(causeLabel).join(', ') : '—'}
@@ -200,7 +292,7 @@ function BrowseTab({ sessions, loading, selected, setSelected, onDelete }) {
 
   if (selected) return <SessionDetail s={selected} onBack={() => setSelected(null)} onDelete={onDelete} />
 
-  // group by student
+  // group by primary student name
   const groups = {}
   for (const s of sessions) {
     const k = s.studentName || 'Unnamed'
@@ -209,27 +301,47 @@ function BrowseTab({ sessions, loading, selected, setSelected, onDelete }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-ecg-gray font-mono">{sessions.length} session{sessions.length !== 1 ? 's' : ''}</span>
+        <button
+          onClick={() => downloadCSV(sessions)}
+          className="text-[10px] font-bold text-ecg-green border border-ecg-green/50 rounded px-2.5 py-1 hover:bg-ecg-green/10 transition-colors uppercase tracking-widest"
+        >
+          Export CSV
+        </button>
+      </div>
+
       {Object.entries(groups).map(([student, list]) => (
         <div key={student}>
           <div className="text-[11px] text-ecg-green font-mono uppercase tracking-widest mb-1.5">
             {student} <span className="text-ecg-gray">· {list.length}</span>
           </div>
           <div className="space-y-1">
-            {list.map(s => (
-              <button
-                key={s.id}
-                onClick={() => setSelected(s)}
-                className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-ecg-border bg-surface2 hover:border-ecg-green text-left transition-colors"
-              >
-                <div className="min-w-0">
-                  <div className="text-[12px] text-ink font-bold truncate">{s.scenarioName || s.finalRhythm}</div>
-                  <div className="text-[10px] text-ecg-gray font-mono">{fmtDate(s.savedAt)}</div>
-                </div>
-                <div className="text-[10px] text-ecg-gray font-mono text-right shrink-0">
-                  {fmtClock(s.durationSec || 0)} · {s.shocks ?? 0} shk
-                </div>
-              </button>
-            ))}
+            {list.map(s => {
+              const allMembers = s.teamMembers?.filter(Boolean) || (s.studentName ? [s.studentName] : [])
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setSelected(s)}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-ecg-border bg-surface2 hover:border-ecg-green text-left transition-colors"
+                >
+                  <div className="min-w-0">
+                    <div className="text-[12px] text-ink font-bold truncate">
+                      {s.scenarioName || s.finalRhythm}
+                    </div>
+                    <div className="text-[10px] text-ecg-gray font-mono">
+                      {fmtDate(s.savedAt)}
+                      {allMembers.length > 1 && (
+                        <span className="ml-1">· {allMembers.length} members</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-ecg-gray font-mono text-right shrink-0">
+                    {fmtClock(s.durationSec || 0)} · {s.shocks ?? 0} shk
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </div>
       ))}
@@ -239,6 +351,8 @@ function BrowseTab({ sessions, loading, selected, setSelected, onDelete }) {
 
 function SessionDetail({ s, onBack, onDelete }) {
   const base = s.eventLog?.[0]?.time ?? null
+  const allMembers = s.teamMembers?.filter(Boolean) || (s.studentName ? [s.studentName] : [])
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -251,9 +365,26 @@ function SessionDetail({ s, onBack, onDelete }) {
         </button>
       </div>
 
+      {/* Team Members */}
       <div>
-        <div className="text-sm font-bold text-ink">{s.studentName}</div>
-        <div className="text-[10px] text-ecg-gray font-mono">{fmtDate(s.savedAt)}</div>
+        <div className="text-[10px] text-ecg-green font-mono uppercase tracking-widest mb-1">
+          {allMembers.length > 1 ? 'Team Members' : 'Student'}
+        </div>
+        {allMembers.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {allMembers.map((name, i) => (
+              <span
+                key={i}
+                className="text-[11px] font-bold text-ink bg-surface2 border border-ecg-border rounded-lg px-2 py-1"
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="text-sm text-ecg-gray">—</span>
+        )}
+        <div className="text-[10px] text-ecg-gray font-mono mt-1">{fmtDate(s.savedAt)}</div>
       </div>
 
       <div>
@@ -313,7 +444,10 @@ function SessionDetail({ s, onBack, onDelete }) {
           {s.eventLog.map((e, i) => (
             <div key={i} className="flex gap-2 text-[11px] font-mono py-0.5">
               <span className="text-ecg-gray w-12 shrink-0">{relTime(base, e.time)}</span>
-              <span className="text-ink">{e.label}{e.detail ? <span className="text-ecg-gray"> · {e.detail}</span> : null}</span>
+              <span className="text-ink">
+                {e.label}
+                {e.detail ? <span className="text-ecg-gray"> · {e.detail}</span> : null}
+              </span>
             </div>
           ))}
         </div>

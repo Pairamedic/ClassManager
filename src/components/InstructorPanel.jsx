@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import { RHYTHM_LIST } from '../data/rhythms'
-import { SCENARIOS } from '../data/scenarios'
+import { SCENARIOS, SCENARIO_GROUPS } from '../data/scenarios'
 import { REVERSIBLE_CAUSES } from '../data/reversibleCauses'
 import { firebaseReady, fbSaveScenario, fbLoadScenarios, fbDeleteScenario } from '../firebase'
 
@@ -119,20 +119,31 @@ export default function InstructorPanel({ onEndSession }) {
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
 
-          {/* QUICK SCENARIOS */}
+          {/* QUICK SCENARIOS — grouped by AHA category */}
           <CollapsibleSection title="Quick Scenarios">
-            <div className="grid grid-cols-2 gap-1">
-              {SCENARIOS.map(sc => (
-                <button
-                  key={sc.id}
-                  onClick={() => { dispatch({ type: 'LOAD_SCENARIO', scenario: sc }); close() }}
-                  className="text-left px-2 py-1.5 rounded border border-ecg-border bg-surface2 hover:border-ecg-amber transition-colors"
-                >
-                  <div className="text-[10px] font-bold text-ink leading-tight">{sc.name}</div>
-                  <div className="text-[9px] text-ecg-gray leading-tight mt-0.5">{sc.description}</div>
-                </button>
-              ))}
-            </div>
+            {SCENARIO_GROUPS.map(group => {
+              const groupScenarios = SCENARIOS.filter(sc => sc.group === group.key)
+              if (!groupScenarios.length) return null
+              return (
+                <div key={group.key} className="mb-3 last:mb-0">
+                  <div className="text-[9px] text-ecg-gray font-mono uppercase tracking-widest mb-1 pb-0.5 border-b border-ecg-border/40">
+                    {group.label}
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {groupScenarios.map(sc => (
+                      <button
+                        key={sc.id}
+                        onClick={() => { dispatch({ type: 'LOAD_SCENARIO', scenario: sc }); close() }}
+                        className="text-left px-2 py-1.5 rounded border border-ecg-border bg-surface2 hover:border-ecg-amber transition-colors"
+                      >
+                        <div className="text-[10px] font-bold text-ink leading-tight">{sc.name}</div>
+                        <div className="text-[9px] text-ecg-gray leading-tight mt-0.5">{sc.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </CollapsibleSection>
 
           {/* CLOUD SCENARIOS */}
