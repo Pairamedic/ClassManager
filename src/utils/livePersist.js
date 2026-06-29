@@ -21,6 +21,9 @@ export function loadLiveState(initialState) {
       pacer:  { ...initialState.pacer,  ...saved.pacer },
       cpr:    { ...initialState.cpr,    ...saved.cpr },
       instructorOpen: false,
+      // Auto-power-on when resuming an active session so the instructor
+      // doesn't lose mid-run state behind the power screen on a refresh.
+      powered: saved.powered ?? (saved.codeStartTime != null),
     }
   } catch {
     return initialState

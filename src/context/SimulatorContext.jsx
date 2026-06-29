@@ -46,7 +46,9 @@ export const initialState = {
   codeStartTime: null,
   instructorOpen: false,
   scenarioName: null,
+  scenarioDescription: null,
   pendingScenarioIntro: null,
+  powered: false,
 }
 
 function logEvent(state, entry) {
@@ -81,6 +83,9 @@ function reducer(state, action) {
 
     case 'TOGGLE_VITALS_HIDDEN':
       return { ...state, vitalsHidden: !state.vitalsHidden }
+
+    case 'SET_VITALS_HIDDEN':
+      return { ...state, vitalsHidden: action.value }
 
     case 'TOGGLE_LABEL_HIDDEN':
       return { ...state, labelHidden: !state.labelHidden }
@@ -226,6 +231,16 @@ function reducer(state, action) {
         eventLog: logEvent(state, { type: 'code', label: 'Code stopped' }),
       }
 
+    case 'SET_SCENARIO_META':
+      return {
+        ...state,
+        scenarioName: action.name ?? state.scenarioName,
+        scenarioDescription: action.description ?? state.scenarioDescription,
+      }
+
+    case 'DISMISS_SCENARIO_DESCRIPTION':
+      return { ...state, scenarioDescription: null }
+
     case 'RESET_SESSION':
       return {
         ...state,
@@ -240,6 +255,7 @@ function reducer(state, action) {
         eventLog: [],
         codeStartTime: null,
         pendingScenarioIntro: null,
+        scenarioDescription: null,
       }
 
     case 'LOAD_SCENARIO':
@@ -250,6 +266,7 @@ function reducer(state, action) {
         vitalsHidden: action.scenario.vitalsHidden ?? false,
         labelHidden: true,
         scenarioName: action.scenario.name,
+        scenarioDescription: action.scenario.description || null,
         defib: { ...initialState.defib },
         pacer: { ...initialState.pacer, captureThreshold: action.scenario.captureThreshold ?? 60 },
         cpr: { ...initialState.cpr },
@@ -270,6 +287,9 @@ function reducer(state, action) {
         codeStartTime: Date.now(),
         eventLog: logEvent(state, { type: 'code', label: 'Session started' }),
       }
+
+    case 'POWER_ON':
+      return { ...state, powered: true }
 
     default:
       return state

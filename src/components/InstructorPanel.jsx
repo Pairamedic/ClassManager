@@ -1,9 +1,90 @@
 import { useState, useEffect } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import { RHYTHM_LIST } from '../data/rhythms'
-import { SCENARIOS } from '../data/scenarios'
+import { SCENARIOS, SCENARIO_GROUPS } from '../data/scenarios'
 import { REVERSIBLE_CAUSES } from '../data/reversibleCauses'
 import { firebaseReady, fbSaveScenario, fbLoadScenarios, fbDeleteScenario } from '../firebase'
+
+// ── Scenario parser ───────────────────────────────────────────────────────────
+const RHYTHM_ALIASES = {
+  nsr: 'NSR', 'normal sinus': 'NSR', 'sinus rhythm': 'NSR', 'normal': 'NSR',
+  'sinus brady': 'SINUS_BRADY', 'sinusbradycardia': 'SINUS_BRADY', 'bradycardia': 'SINUS_BRADY', 'sinus bradycardia': 'SINUS_BRADY',
+  'sinus tach': 'SINUS_TACH', 'sinustach': 'SINUS_TACH', 'sinus tachycardia': 'SINUS_TACH',
+  svt: 'SVT', 'supraventricular': 'SVT', 'supraventricular tachycardia': 'SVT', 'psvt': 'SVT',
+  afib: 'AFIB', 'a fib': 'AFIB', 'atrial fibrillation': 'AFIB', 'af': 'AFIB',
+  aflutter: 'AFLUTTER', 'a flutter': 'AFLUTTER', 'atrial flutter': 'AFLUTTER',
+  vtach: 'VTACH', 'v tach': 'VTACH', 'ventricular tachycardia': 'VTACH', 'vt': 'VTACH',
+  vfib: 'VFIB', 'v fib': 'VFIB', 'ventricular fibrillation': 'VFIB', 'vf': 'VFIB',
+  torsades: 'TORSADES', 'tdp': 'TORSADES', 'torsades de pointes': 'TORSADES',
+  asystole: 'ASYSTOLE', 'flatline': 'ASYSTOLE',
+  pea: 'PEA', 'pulseless electrical activity': 'PEA', 'pulseless electrical': 'PEA',
+  agonal: 'AGONAL', 'agonal rhythm': 'AGONAL',
+  junctional: 'JUNCTIONAL', 'junctional rhythm': 'JUNCTIONAL',
+  idioventricular: 'IDIOVENTRICULAR', 'idioventricular rhythm': 'IDIOVENTRICULAR',
+  wenckebach: 'WENCKEBACH', 'mobitz1': 'WENCKEBACH', 'mobitz i': 'WENCKEBACH', 'second degree type i': 'WENCKEBACH',
+  mobitz2: 'MOBITZ2', 'mobitz ii': 'MOBITZ2', 'mobitz 2': 'MOBITZ2', 'second degree type ii': 'MOBITZ2',
+  'first degree': 'FIRST_DEGREE', '1st degree': 'FIRST_DEGREE', 'first degree av block': 'FIRST_DEGREE',
+  'third degree': 'THIRD_DEGREE', '3rd degree': 'THIRD_DEGREE', 'complete block': 'THIRD_DEGREE', 'complete av block': 'THIRD_DEGREE',
+  stemi: 'NSR_STEMI', 'nsr stemi': 'NSR_STEMI',
+  wpw: 'WPW', 'wolff parkinson white': 'WPW',
+}
+
+function matchRhythm(raw) {
+  const key = raw.toLowerCase().trim().replace(/[-_]/g, ' ')
+  if (RHYTHM_ALIASES[key]) return RHYTHM_ALIASES[key]
+  // Try direct ID match (e.g. user types "VFIB", "NSR")
+  const upper = raw.trim().toUpperCase().replace(/ /g, '_')
+  if (RHYTHM_LIST.find(r => r.id === upper)) return upper
+  return null
+}
+
+function parseScenarioText(text) {
+  const result = { vitals: {}, rhythm: null, name: null, description: null, vitalsHidden: null }
+  const lines = text.split('\n')
+  const descLines = []
+
+  for (const line of lines) {
+    const m = line.match(/^([^:]+):\s*(.+)$/)
+    if (!m) {
+      const trimmed = line.trim()
+      if (trimmed) descLines.push(trimmed)
+      continue
+    }
+    const [, rawKey, rawVal] = m
+    const key = rawKey.trim().toLowerCase().replace(/[-_\s]+/g, '')
+    const val = rawVal.trim()
+
+    if (key === 'name' || key === 'scenario') { result.name = val; continue }
+    if (key === 'description' || key === 'desc' || key === 'hx' || key === 'history') { result.description = val; continue }
+    if (key === 'rhythm' || key === 'ecg' || key === 'ekg') {
+      result.rhythm = matchRhythm(val)
+      continue
+    }
+    if (key === 'vitalshidden' || key === 'hidevitals') {
+      result.vitalsHidden = val.toLowerCase() === 'true' || val === '1'
+      continue
+    }
+
+    // BP: 120/80 or BP: 120 (systolic only)
+    if (key === 'bp' || key === 'bloodpressure' || key === 'sbp') {
+      const bp = val.match(/^(\d+)\s*\/\s*(\d+)$/)
+      if (bp) { result.vitals.sbp = Number(bp[1]); result.vitals.dbp = Number(bp[2]) }
+      else if (/^\d+$/.test(val)) result.vitals.sbp = Number(val)
+      continue
+    }
+    if (key === 'dbp' || key === 'diastolic') { if (/^\d+$/.test(val)) result.vitals.dbp = Number(val); continue }
+    if (key === 'hr' || key === 'heartrate' || key === 'pulse') { if (/^\d+$/.test(val)) result.vitals.hr = Number(val); continue }
+    if (key === 'spo2' || key === 'o2sat' || key === 'sat' || key === 'spo') { if (/^\d+/.test(val)) result.vitals.spo2 = parseInt(val); continue }
+    if (key === 'etco2' || key === 'co2' || key === 'etco') { if (/^\d+/.test(val)) result.vitals.etco2 = parseInt(val); continue }
+    if (key === 'temp' || key === 'temperature') { if (/[\d.]+/.test(val)) result.vitals.temp = parseFloat(val); continue }
+
+    // Unrecognized key lines treated as part of description
+    descLines.push(line.trim())
+  }
+
+  if (!result.description && descLines.length) result.description = descLines.join(' ')
+  return result
+}
 
 const CATEGORY_COLORS = {
   normal:  'text-ecg-green',
@@ -119,20 +200,31 @@ export default function InstructorPanel({ onEndSession }) {
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
 
-          {/* QUICK SCENARIOS */}
+          {/* QUICK SCENARIOS — grouped by AHA category */}
           <CollapsibleSection title="Quick Scenarios">
-            <div className="grid grid-cols-2 gap-1">
-              {SCENARIOS.map(sc => (
-                <button
-                  key={sc.id}
-                  onClick={() => { dispatch({ type: 'LOAD_SCENARIO', scenario: sc }); close() }}
-                  className="text-left px-2 py-1.5 rounded border border-ecg-border bg-surface2 hover:border-ecg-amber transition-colors"
-                >
-                  <div className="text-[10px] font-bold text-ink leading-tight">{sc.name}</div>
-                  <div className="text-[9px] text-ecg-gray leading-tight mt-0.5">{sc.description}</div>
-                </button>
-              ))}
-            </div>
+            {SCENARIO_GROUPS.map(group => {
+              const groupScenarios = SCENARIOS.filter(sc => sc.group === group.key)
+              if (!groupScenarios.length) return null
+              return (
+                <div key={group.key} className="mb-3 last:mb-0">
+                  <div className="text-[9px] text-ecg-gray font-mono uppercase tracking-widest mb-1 pb-0.5 border-b border-ecg-border/40">
+                    {group.label}
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {groupScenarios.map(sc => (
+                      <button
+                        key={sc.id}
+                        onClick={() => { dispatch({ type: 'LOAD_SCENARIO', scenario: sc }); close() }}
+                        className="text-left px-2 py-1.5 rounded border border-ecg-border bg-surface2 hover:border-ecg-amber transition-colors"
+                      >
+                        <div className="text-[10px] font-bold text-ink leading-tight">{sc.name}</div>
+                        <div className="text-[9px] text-ecg-gray leading-tight mt-0.5">{sc.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </CollapsibleSection>
 
           {/* CLOUD SCENARIOS */}
@@ -175,6 +267,11 @@ export default function InstructorPanel({ onEndSession }) {
               </div>
             </CollapsibleSection>
           )}
+
+          {/* SCENARIO BUILDER */}
+          <CollapsibleSection title="Scenario Builder">
+            <ScenarioBuilder dispatch={dispatch} close={close} />
+          </CollapsibleSection>
 
           {/* RHYTHM SELECTOR */}
           <CollapsibleSection title="Rhythm">
@@ -297,6 +394,76 @@ export default function InstructorPanel({ onEndSession }) {
 
         </div>
       </div>
+    </div>
+  )
+}
+
+function ScenarioBuilder({ dispatch, close }) {
+  const [text, setText] = useState('')
+  const [applied, setApplied] = useState(false)
+
+  const parsed = text.trim() ? parseScenarioText(text) : null
+  const hasContent = parsed && (
+    parsed.rhythm || parsed.name || parsed.description ||
+    Object.keys(parsed.vitals).length > 0 || parsed.vitalsHidden != null
+  )
+
+  function apply() {
+    if (!parsed) return
+    if (parsed.rhythm) dispatch({ type: 'SET_RHYTHM', rhythm: parsed.rhythm })
+    if (Object.keys(parsed.vitals).length) dispatch({ type: 'SET_VITALS', vitals: parsed.vitals })
+    // vitalsHidden handled via LOAD_SCENARIO-style: we just set via SET_VITALS_HIDDEN if needed
+    if (parsed.vitalsHidden != null) {
+      dispatch({ type: 'SET_VITALS_HIDDEN', value: parsed.vitalsHidden })
+    }
+    if (parsed.name || parsed.description) {
+      dispatch({ type: 'SET_SCENARIO_META', name: parsed.name ?? undefined, description: parsed.description ?? undefined })
+    }
+    setApplied(true)
+    setTimeout(() => setApplied(false), 1800)
+    close()
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[9px] text-ecg-gray leading-relaxed">
+        Type your scenario using <span className="text-ink font-mono">Key: Value</span> pairs.
+        Unrecognized lines become the student description. Supported keys:
+        <span className="text-ecg-green font-mono"> HR BP SpO2 EtCO2 Temp Rhythm Name Description</span>
+      </p>
+      <div className="text-[9px] text-ecg-gray font-mono bg-surface rounded px-2 py-1.5 border border-ecg-border/40 whitespace-pre leading-relaxed select-all">{`Name: Symptomatic Brady — 80yo F\nDescription: Near-syncope, dizzy.\nHR: 38\nBP: 88/60\nSpO2: 93\nRhythm: Sinus Brady`}</div>
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        rows={7}
+        placeholder={'Name: ...\nDescription: ...\nHR: 72\nBP: 120/80\nSpO2: 98\nEtCO2: 35\nRhythm: NSR'}
+        className="w-full bg-surface2 border border-ecg-border rounded px-2.5 py-2 text-[11px] font-mono text-ink placeholder-ecg-gray/50 focus:outline-none focus:border-ecg-green resize-none"
+        spellCheck={false}
+      />
+
+      {/* Live preview */}
+      {parsed && (
+        <div className="border border-ecg-border/40 rounded bg-surface p-2 space-y-1 text-[10px] font-mono">
+          {parsed.name       && <div><span className="text-ecg-gray">Name: </span><span className="text-ink">{parsed.name}</span></div>}
+          {parsed.description && <div><span className="text-ecg-gray">Desc: </span><span className="text-ecg-amber">{parsed.description}</span></div>}
+          {parsed.rhythm     && <div><span className="text-ecg-gray">Rhythm: </span><span className="text-ecg-green">{parsed.rhythm}</span></div>}
+          {parsed.rhythm === null && text.match(/rhythm\s*:/i) && (
+            <div className="text-ecg-red">Rhythm not recognized</div>
+          )}
+          {Object.entries(parsed.vitals).map(([k, v]) => (
+            <div key={k}><span className="text-ecg-gray">{k.toUpperCase()}: </span><span className="text-ink">{v}</span></div>
+          ))}
+          {!hasContent && <div className="text-ecg-gray">Nothing recognized yet</div>}
+        </div>
+      )}
+
+      <button
+        onClick={apply}
+        disabled={!hasContent}
+        className="w-full min-h-[40px] rounded border font-bold text-[11px] uppercase tracking-widest transition-colors border-ecg-green text-ecg-green bg-surface2 hover:bg-ecg-green hover:text-black disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+      >
+        {applied ? '✓ Applied' : 'Apply to Monitor'}
+      </button>
     </div>
   )
 }
