@@ -100,6 +100,14 @@ export default function ACLSSimulator() {
           )}
           <HeaderButton onClick={() => setShowPrint(true)}>Print</HeaderButton>
           {state.powered && <CodeClock />}
+          {state.powered && (
+            <button
+              onClick={() => setShowEndSession(true)}
+              className="px-2.5 min-h-[40px] text-[11px] font-bold font-mono rounded-lg border active:scale-95 transition-all uppercase tracking-widest border-ecg-red/70 text-ecg-red bg-ecg-red/10 hover:bg-ecg-red/20"
+            >
+              End Session
+            </button>
+          )}
           {user && (
             <button
               onClick={() => signOut()}

@@ -188,14 +188,6 @@ export default function InstructorPanel({ onEndSession }) {
           >
             {state.labelHidden ? 'Reveal Rhythm' : 'Hide Rhythm'}
           </button>
-          {onEndSession && (
-            <button
-              onClick={onEndSession}
-              className="flex-1 min-h-[40px] rounded-lg border border-ecg-red/60 text-ecg-red bg-ecg-red/5 hover:bg-ecg-red/20 font-bold text-xs uppercase tracking-widest transition-colors"
-            >
-              End Session
-            </button>
-          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
