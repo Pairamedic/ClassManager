@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Each instructor can only read/write their own sessions and scenarios.
+    // The uid field is stamped on every document by the app at write time.
+
+    match /acls_sessions/{docId} {
+      allow read, delete: if request.auth != null
+                          && resource.data.uid == request.auth.uid;
+      allow create:       if request.auth != null
+                          && request.resource.data.uid == request.auth.uid;
+    }
+
+    match /acls_scenarios/{docId} {
+      allow read, delete: if request.auth != null
+                          && resource.data.uid == request.auth.uid;
+      allow create:       if request.auth != null
+                          && request.resource.data.uid == request.auth.uid;
+    }
+  }
+}

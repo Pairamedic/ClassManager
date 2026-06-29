@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app'
 import {
   getFirestore, collection, addDoc, getDocs,
-  deleteDoc, doc, query, orderBy,
+  deleteDoc, doc, query, orderBy, where,
 } from 'firebase/firestore'
 import {
   getAuth,
@@ -42,6 +42,12 @@ function auth() {
   return _auth
 }
 
+function uid() {
+  const u = auth().currentUser
+  if (!u) throw new Error('Not signed in')
+  return u.uid
+}
+
 // ── Auth ──────────────────────────────────────────────────
 export function subscribeAuth(callback) {
   if (!firebaseReady) { callback(null); return () => {} }
@@ -62,10 +68,11 @@ export async function signOut() {
   return fbSignOut(auth())
 }
 
-// ── Scenario storage ──────────────────────────────────────
+// ── Scenario storage (scoped per authenticated user) ──────
 export async function fbSaveScenario(payload) {
   const ref = await addDoc(collection(db(), 'acls_scenarios'), {
     ...payload,
+    uid: uid(),
     savedAt: Date.now(),
   })
   return ref.id
@@ -73,7 +80,11 @@ export async function fbSaveScenario(payload) {
 
 export async function fbLoadScenarios() {
   const snap = await getDocs(
-    query(collection(db(), 'acls_scenarios'), orderBy('savedAt', 'desc'))
+    query(
+      collection(db(), 'acls_scenarios'),
+      where('uid', '==', uid()),
+      orderBy('savedAt', 'desc'),
+    )
   )
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
 }
@@ -82,10 +93,11 @@ export async function fbDeleteScenario(id) {
   await deleteDoc(doc(db(), 'acls_scenarios', id))
 }
 
-// ── Student simulation sessions ───────────────────────────
+// ── Student simulation sessions (scoped per authenticated user) ──
 export async function fbSaveSession(payload) {
   const ref = await addDoc(collection(db(), 'acls_sessions'), {
     ...payload,
+    uid: uid(),
     savedAt: Date.now(),
   })
   return ref.id
@@ -93,7 +105,11 @@ export async function fbSaveSession(payload) {
 
 export async function fbLoadSessions() {
   const snap = await getDocs(
-    query(collection(db(), 'acls_sessions'), orderBy('savedAt', 'desc'))
+    query(
+      collection(db(), 'acls_sessions'),
+      where('uid', '==', uid()),
+      orderBy('savedAt', 'desc'),
+    )
   )
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
 }
