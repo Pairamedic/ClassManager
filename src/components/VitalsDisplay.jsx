@@ -38,10 +38,12 @@ function VitalTile({ label, children, color = 'text-ecg-green', hidden, editable
   const inner = (
     <>
       <span className="text-[9px] font-mono uppercase tracking-widest text-ecg-gray leading-none">{label}</span>
-      {/* Fixed-height value row so every tile's number sits on the same baseline */}
-      <div className={`flex items-baseline h-9 font-bold font-mono leading-none ${color}`}>
+      {/* Fixed-height value row so every tile's number sits on the same baseline.
+          min-w-0 + overflow-hidden keep a wide reading (e.g. blood pressure) from
+          spilling into the neighbouring tile on narrow screens. */}
+      <div className={`flex items-baseline h-9 min-w-0 overflow-hidden font-bold font-mono leading-none ${color}`}>
         {hidden ? (
-          <span className="text-ecg-gray text-4xl">--</span>
+          <span className="text-2xl sm:text-3xl lg:text-4xl">--</span>
         ) : children}
       </div>
     </>
@@ -134,7 +136,7 @@ export default function VitalsDisplay() {
           <VitalInput {...editorProps} width="w-16" />
         ) : (
           <>
-            <span className="text-4xl">{displayHR}</span>
+            <span className="text-2xl sm:text-3xl lg:text-4xl">{displayHR}</span>
             <span className="text-[11px] text-ecg-gray font-mono ml-1">bpm</span>
           </>
         )}
@@ -146,10 +148,10 @@ export default function VitalsDisplay() {
           <VitalInput {...editorProps} width="w-24" text="text-2xl" mode="text" />
         ) : (
           <>
-            <span className="text-4xl">{v.sbp}</span>
-            <span className="text-2xl text-ecg-gray mx-0.5">/</span>
-            <span className="text-3xl">{v.dbp}</span>
-            <span className="text-[10px] text-ecg-gray font-mono ml-1">
+            <span className="text-2xl sm:text-3xl lg:text-4xl">{v.sbp}</span>
+            <span className="text-lg sm:text-xl lg:text-2xl text-ecg-gray mx-0.5">/</span>
+            <span className="text-xl sm:text-2xl lg:text-3xl">{v.dbp}</span>
+            <span className="text-[10px] text-ecg-gray font-mono ml-1 whitespace-nowrap">
               ({map(v.sbp, v.dbp)}) mmHg
             </span>
           </>
@@ -162,7 +164,7 @@ export default function VitalsDisplay() {
           <VitalInput {...editorProps} width="w-16" />
         ) : (
           <>
-            <span className="text-4xl">{v.spo2}</span>
+            <span className="text-2xl sm:text-3xl lg:text-4xl">{v.spo2}</span>
             <span className="text-base ml-0.5">%</span>
           </>
         )}
@@ -174,7 +176,7 @@ export default function VitalsDisplay() {
           <VitalInput {...editorProps} width="w-16" />
         ) : (
           <>
-            <span className="text-4xl">{v.etco2}</span>
+            <span className="text-2xl sm:text-3xl lg:text-4xl">{v.etco2}</span>
             <span className="text-[11px] text-ecg-gray font-mono ml-1">mmHg</span>
           </>
         )}
@@ -186,7 +188,7 @@ export default function VitalsDisplay() {
           <VitalInput {...editorProps} width="w-20" text="text-2xl" mode="decimal" />
         ) : (
           <>
-            <span className="text-4xl">{v.temp.toFixed(1)}</span>
+            <span className="text-2xl sm:text-3xl lg:text-4xl">{v.temp.toFixed(1)}</span>
             <span className="text-base ml-0.5">°F</span>
           </>
         )}
