@@ -30,25 +30,39 @@ function VitalInput({ value, onChange, onCommit, onCancel, width = 'w-16', text 
   )
 }
 
-function VitalTile({ label, children, color = 'text-ecg-green', hidden, editable, onEdit, className = '' }) {
-  const clickable = editable && !hidden
-  return (
-    <div className={`flex flex-col justify-between p-2 border-r border-ecg-border last:border-r-0 min-w-0 ${className}`}>
+function VitalTile({ label, children, color = 'text-ecg-green', hidden, editable, isEditing, onEdit, className = '' }) {
+  // Whole tile becomes the tap target. Rendered as a real <button> so taps
+  // fire reliably on touch devices (iOS Safari ignores click on plain divs).
+  const clickable = editable && !hidden && !isEditing
+
+  const inner = (
+    <>
       <span className="text-[9px] font-mono uppercase tracking-widest text-ecg-gray leading-none">{label}</span>
       {/* Fixed-height value row so every tile's number sits on the same baseline */}
-      <div
-        onClick={clickable ? onEdit : undefined}
-        title={clickable ? 'Tap to edit' : undefined}
-        className={`flex items-baseline h-9 font-bold font-mono leading-none ${color} ${
-          clickable ? 'cursor-text rounded hover:bg-ecg-green/5 -mx-1 px-1 transition-colors' : ''
-        }`}
-      >
+      <div className={`flex items-baseline h-9 font-bold font-mono leading-none ${color}`}>
         {hidden ? (
           <span className="text-ecg-gray text-4xl">--</span>
         ) : children}
       </div>
-    </div>
+    </>
   )
+
+  const base = `flex flex-col justify-between p-2 border-r border-ecg-border last:border-r-0 min-w-0 ${className}`
+
+  if (clickable) {
+    return (
+      <button
+        type="button"
+        onClick={onEdit}
+        title="Tap to edit"
+        className={`${base} text-left cursor-pointer hover:bg-ecg-green/5 transition-colors`}
+      >
+        {inner}
+      </button>
+    )
+  }
+
+  return <div className={base}>{inner}</div>
 }
 
 export default function VitalsDisplay() {
@@ -115,7 +129,7 @@ export default function VitalsDisplay() {
     <div className="flex shrink-0 bg-surface border-t border-ecg-border" style={{ minHeight: 72 }}>
 
       {/* HR */}
-      <VitalTile label="HR" color={hrColor} hidden={h} className="flex-1" editable onEdit={() => startEdit('hr', displayHR)}>
+      <VitalTile label="HR" color={hrColor} hidden={h} className="flex-1" editable isEditing={editing === 'hr'} onEdit={() => startEdit('hr', displayHR)}>
         {editing === 'hr' ? (
           <VitalInput {...editorProps} width="w-16" />
         ) : (
@@ -127,7 +141,7 @@ export default function VitalsDisplay() {
       </VitalTile>
 
       {/* NIBP */}
-      <VitalTile label="NIBP" color={bpColor} hidden={h} className="flex-[1.4]" editable onEdit={() => startEdit('bp', `${v.sbp}/${v.dbp}`)}>
+      <VitalTile label="NIBP" color={bpColor} hidden={h} className="flex-[1.4]" editable isEditing={editing === 'bp'} onEdit={() => startEdit('bp', `${v.sbp}/${v.dbp}`)}>
         {editing === 'bp' ? (
           <VitalInput {...editorProps} width="w-24" text="text-2xl" mode="text" />
         ) : (
@@ -143,7 +157,7 @@ export default function VitalsDisplay() {
       </VitalTile>
 
       {/* SpO2 */}
-      <VitalTile label="SpO₂" color={spo2Color} hidden={h} className="flex-1" editable onEdit={() => startEdit('spo2', v.spo2)}>
+      <VitalTile label="SpO₂" color={spo2Color} hidden={h} className="flex-1" editable isEditing={editing === 'spo2'} onEdit={() => startEdit('spo2', v.spo2)}>
         {editing === 'spo2' ? (
           <VitalInput {...editorProps} width="w-16" />
         ) : (
@@ -155,7 +169,7 @@ export default function VitalsDisplay() {
       </VitalTile>
 
       {/* EtCO2 */}
-      <VitalTile label="EtCO₂" color="text-ecg-amber" hidden={h} className="flex-1" editable onEdit={() => startEdit('etco2', v.etco2)}>
+      <VitalTile label="EtCO₂" color="text-ecg-amber" hidden={h} className="flex-1" editable isEditing={editing === 'etco2'} onEdit={() => startEdit('etco2', v.etco2)}>
         {editing === 'etco2' ? (
           <VitalInput {...editorProps} width="w-16" />
         ) : (
@@ -167,7 +181,7 @@ export default function VitalsDisplay() {
       </VitalTile>
 
       {/* Temp */}
-      <VitalTile label="Temp" color="text-ecg-gray" hidden={h} className="flex-1" editable onEdit={() => startEdit('temp', v.temp.toFixed(1))}>
+      <VitalTile label="Temp" color="text-ecg-gray" hidden={h} className="flex-1" editable isEditing={editing === 'temp'} onEdit={() => startEdit('temp', v.temp.toFixed(1))}>
         {editing === 'temp' ? (
           <VitalInput {...editorProps} width="w-20" text="text-2xl" mode="decimal" />
         ) : (
