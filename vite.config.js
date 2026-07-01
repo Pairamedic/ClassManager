@@ -9,6 +9,13 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     VitePWA({
+      // RECOVERY: ship a self-destroying service worker. Some devices are stuck
+      // on an old worker that keeps serving a stale app shell (white screen) and
+      // that manual cache-clearing on iOS doesn't reliably remove. This build
+      // generates a worker that unregisters itself and deletes all caches on
+      // every device, so the app loads fresh from the network again. Flip back
+      // to a normal PWA (selfDestroying:false) once clients have recovered.
+      selfDestroying: true,
       // 'autoUpdate' + skipWaiting/clientsClaim: a new deploy's service worker
       // activates on its own and takes control immediately, so users are never
       // stranded on a stale cached shell (which shows as a white screen when the
