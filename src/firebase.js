@@ -2,7 +2,7 @@ import { initializeApp, getApps } from 'firebase/app'
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
 import {
   getFirestore, collection, addDoc, getDocs,
-  deleteDoc, doc, query, orderBy, where,
+  deleteDoc, doc, query, where,
 } from 'firebase/firestore'
 import {
   getAuth,
@@ -132,14 +132,15 @@ export async function fbSaveScenario(payload) {
 
 export async function fbLoadScenarios() {
   const uid = requireUid()
+  // Sort client-side rather than orderBy() in the query — combining an
+  // equality filter with an orderBy on a different field requires a
+  // composite index, which isn't guaranteed to exist in every project.
   const snap = await getDocs(
-    query(
-      collection(db(), 'acls_scenarios'),
-      where('uid', '==', uid),
-      orderBy('savedAt', 'desc'),
-    )
+    query(collection(db(), 'acls_scenarios'), where('uid', '==', uid))
   )
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => b.savedAt - a.savedAt)
 }
 
 export async function fbDeleteScenario(id) {
@@ -160,14 +161,14 @@ export async function fbSaveSession(payload) {
 
 export async function fbLoadSessions() {
   const uid = requireUid()
+  // Sort client-side (see fbLoadScenarios) to avoid depending on a
+  // composite index for uid + savedAt.
   const snap = await getDocs(
-    query(
-      collection(db(), 'acls_sessions'),
-      where('uid', '==', uid),
-      orderBy('savedAt', 'desc'),
-    )
+    query(collection(db(), 'acls_sessions'), where('uid', '==', uid))
   )
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => b.savedAt - a.savedAt)
 }
 
 export async function fbDeleteSession(id) {

@@ -93,30 +93,30 @@ export default function GradebookModal({ onClose }) {
     <div className="fixed inset-0 z-50 flex flex-col bg-monitor-bg">
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-surface border-b border-ecg-border shrink-0">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-2 px-4 py-3 bg-surface border-b border-ecg-border shrink-0 flex-wrap">
+        <button
+          onClick={onClose}
+          title="Return to the cardiac monitor simulator"
+          className="flex items-center gap-1.5 px-3 min-h-[36px] text-[11px] font-bold font-mono uppercase tracking-widest rounded-lg border border-ecg-border text-ecg-gray bg-surface2 hover:text-ink hover:border-ecg-green active:scale-95 transition-all whitespace-nowrap order-1"
+        >
+          <span className="text-ecg-green">←</span> Monitor
+        </button>
+        <div className="flex items-center gap-3 order-3 sm:order-2">
           <h2 className="text-sm font-bold text-ink tracking-widest uppercase">Competency Gradebook</h2>
-          <span className="text-[10px] text-ecg-gray font-mono">AHA ACLS · 14 Required Rhythms</span>
+          <span className="text-[10px] text-ecg-gray font-mono hidden sm:inline">AHA ACLS · 14 Required Rhythms</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 order-2 sm:order-3">
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search student…"
-            className="bg-surface2 border border-ecg-border rounded-lg px-3 py-1.5 text-[12px] text-ink placeholder-ecg-gray focus:outline-none focus:border-ecg-green w-40"
+            className="bg-surface2 border border-ecg-border rounded-lg px-3 py-1.5 text-[12px] text-ink placeholder-ecg-gray focus:outline-none focus:border-ecg-green w-28 sm:w-40"
           />
           <button
             onClick={() => setSort(s => s === 'name' ? 'completion' : 'name')}
             className="px-2.5 py-1.5 text-[10px] font-bold font-mono uppercase tracking-widest border border-ecg-border text-ecg-gray bg-surface2 rounded-lg hover:border-ecg-gray transition-colors whitespace-nowrap"
           >
             Sort: {sort === 'name' ? 'Name' : '% Done'}
-          </button>
-          <button
-            onClick={onClose}
-            title="Return to the cardiac monitor simulator"
-            className="flex items-center gap-1.5 px-3 min-h-[36px] text-[11px] font-bold font-mono uppercase tracking-widest rounded-lg border border-ecg-border text-ecg-gray bg-surface2 hover:text-ink hover:border-ecg-green active:scale-95 transition-all whitespace-nowrap"
-          >
-            <span className="text-ecg-green">←</span> Monitor
           </button>
         </div>
       </div>
