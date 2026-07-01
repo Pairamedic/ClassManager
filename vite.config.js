@@ -16,6 +16,11 @@ export default defineConfig(({ mode }) => ({
       // every device, so the app loads fresh from the network again. Flip back
       // to a normal PWA (selfDestroying:false) once clients have recovered.
       selfDestroying: true,
+      // Do NOT let the client register a worker while self-destroying. The
+      // self-destroyer reloads the page after it unregisters; if the app then
+      // re-registered it, that would loop forever. The browser still picks up
+      // this worker on its own to purge already-stuck clients.
+      injectRegister: false,
       // 'autoUpdate' + skipWaiting/clientsClaim: a new deploy's service worker
       // activates on its own and takes control immediately, so users are never
       // stranded on a stale cached shell (which shows as a white screen when the
