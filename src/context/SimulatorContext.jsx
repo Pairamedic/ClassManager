@@ -1,10 +1,15 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react'
 import { RHYTHMS } from '../data/rhythms'
 import { loadLiveState, saveLiveState } from '../utils/livePersist'
+import { getPediatricVitals } from '../data/pediatricVitals'
+import { DEFAULT_ZONE, getZone } from '../data/broselowTape'
 
 const Ctx = createContext(null)
 
 export const initialState = {
+  mode: 'ACLS', // 'ACLS' | 'PALS'
+  broselowZone: null,
+
   currentRhythm: 'NSR',
   isRunning: true,
 
@@ -84,17 +89,29 @@ function reducer(state, action) {
 
     // Set HR directly (e.g. typed on the monitor) and, when the current rhythm
     // is a rate-driven sinus rhythm, auto-select the matching morphology so the
-    // EKG reflects the new rate: <60 brady, >160 SVT, >100 sinus tach, else NSR.
-    // The typed HR is preserved (unlike SET_RHYTHM, which snaps to native rate).
+    // EKG reflects the new rate. In ACLS mode: <60 brady, >160 SVT, >100 sinus
+    // tach, else NSR. In PALS mode the cutoffs come from the active Broselow
+    // zone's normal ranges. The typed HR is preserved (unlike SET_RHYTHM,
+    // which snaps to native rate).
     case 'SET_HR': {
       const hr = Math.max(0, Math.min(300, Math.round(Number(action.hr) || 0)))
-      const RATE_DRIVEN = ['NSR', 'SINUS_BRADY', 'SINUS_TACH', 'SVT']
+      const RATE_DRIVEN = ['NSR', 'SINUS_BRADY', 'SINUS_TACH', 'SVT', 'PEDIATRIC_SVT']
       let { currentRhythm, rhythmHistory, eventLog } = state
       if (RATE_DRIVEN.includes(currentRhythm)) {
-        const target = hr < 60 ? 'SINUS_BRADY'
-          : hr > 160 ? 'SVT'
-          : hr > 100 ? 'SINUS_TACH'
-          : 'NSR'
+        let target
+        if (state.mode === 'PALS') {
+          const pv = getPediatricVitals(state.broselowZone, DEFAULT_ZONE)
+          const svtRhythm = RHYTHMS.PEDIATRIC_SVT ? 'PEDIATRIC_SVT' : 'SVT'
+          target = hr < pv.hrLow ? 'SINUS_BRADY'
+            : hr > pv.svtThreshold ? svtRhythm
+            : hr > pv.hrHigh ? 'SINUS_TACH'
+            : 'NSR'
+        } else {
+          target = hr < 60 ? 'SINUS_BRADY'
+            : hr > 160 ? 'SVT'
+            : hr > 100 ? 'SINUS_TACH'
+            : 'NSR'
+        }
         if (target !== currentRhythm) {
           currentRhythm = target
           rhythmHistory = [...state.rhythmHistory, { rhythm: target, time: Date.now() }]
@@ -102,6 +119,24 @@ function reducer(state, action) {
         }
       }
       return { ...state, currentRhythm, rhythmHistory, eventLog, vitals: { ...state.vitals, hr } }
+    }
+
+    case 'SET_MODE':
+      return {
+        ...state,
+        mode: action.mode,
+        broselowZone: action.mode === 'PALS' ? (state.broselowZone || DEFAULT_ZONE) : null,
+      }
+
+    case 'SET_BROSELOW_ZONE': {
+      const pv = getPediatricVitals(action.zone, DEFAULT_ZONE)
+      return {
+        ...state,
+        broselowZone: action.zone,
+        eventLog: logEvent(state, { type: 'zone', label: 'Broselow zone', detail: action.zone }),
+        vitals: action.applyDefaults ? { ...state.vitals, ...pv.defaultVitals } : state.vitals,
+        defib: action.applyDefaults ? { ...state.defib, energy: getZone(action.zone).defibJoules.initial } : state.defib,
+      }
     }
 
     case 'TOGGLE_VITALS_HIDDEN':
@@ -201,13 +236,16 @@ function reducer(state, action) {
     case 'DECLARE_ROSC': {
       const perfusing = RHYTHMS[state.currentRhythm]?.pulse ? state.currentRhythm : 'NSR'
       const rhythmChanged = perfusing !== state.currentRhythm
+      const roscVitals = state.mode === 'PALS'
+        ? getPediatricVitals(state.broselowZone, DEFAULT_ZONE).postRosc
+        : { hr: 88, sbp: 104, dbp: 62, spo2: 93, etco2: 38 }
       return {
         ...state,
         rosc: true,
         roscTime: Date.now(),
         currentRhythm: perfusing,
         cpr: { ...state.cpr, active: false },
-        vitals: { ...state.vitals, hr: 88, sbp: 104, dbp: 62, spo2: 93, etco2: 38 },
+        vitals: { ...state.vitals, ...roscVitals },
         rhythmHistory: rhythmChanged
           ? [...state.rhythmHistory, { rhythm: perfusing, time: Date.now() }]
           : state.rhythmHistory,
@@ -311,14 +349,27 @@ function reducer(state, action) {
         eventLog: logEvent(state, { type: 'code', label: 'Session started' }),
       }
 
-    case 'POWER_ON':
+    case 'POWER_ON': {
+      const mode = action.mode || 'ACLS'
+      const broselowZone = mode === 'PALS' ? (action.broselowZone || DEFAULT_ZONE) : null
+      const vitals = mode === 'PALS'
+        ? { ...state.vitals, ...getPediatricVitals(broselowZone, DEFAULT_ZONE).defaultVitals }
+        : state.vitals
+      const defib = mode === 'PALS'
+        ? { ...state.defib, energy: getZone(broselowZone).defibJoules.initial }
+        : state.defib
       return {
         ...state,
         powered: true,
+        mode,
+        broselowZone,
+        vitals,
+        defib,
         teamMembers: action.teamMembers || [],
         codeStartTime: Date.now(),
         eventLog: logEvent(state, { type: 'code', label: 'Session started' }),
       }
+    }
 
     case 'POWER_OFF':
       return { ...initialState }

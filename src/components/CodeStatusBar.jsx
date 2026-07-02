@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import { RHYTHMS } from '../data/rhythms'
 import { playMetronomeClick, playAlertBeep, resumeAudio } from '../utils/audio'
+import { getZone, DEFAULT_ZONE } from '../data/broselowTape'
 
 const CYCLE_SEC = 120          // AHA 2-minute CPR cycle
 const METRONOME_BPM = 110      // target 100-120/min
@@ -75,8 +76,11 @@ export default function CodeStatusBar() {
     over: 'text-ecg-red border-ecg-red animate-pulse',
   }[epiState]
 
-  const amioText = amioCount === 0 ? 'Amio: 300 mg next'
-    : amioCount === 1 ? 'Amio: 150 mg next'
+  const isPals = state.mode === 'PALS'
+  const amioDoseMg = isPals ? getZone(state.broselowZone || DEFAULT_ZONE).doses.amiodarone.mg : 300
+  const amioText = amioCount === 0 ? `Amio: ${amioDoseMg} mg next`
+    : amioCount === 1 && !isPals ? 'Amio: 150 mg next'
+    : amioCount < 3 && isPals ? `Amio: ${amioDoseMg} mg next`
     : 'Amio: max given'
 
   // ── ETCO2 CPR-quality / ROSC cue (during arrest) ──

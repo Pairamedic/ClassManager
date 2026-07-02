@@ -2,14 +2,25 @@ import { useEffect, useRef, useState } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import { RHYTHMS } from '../data/rhythms'
 import { playChargeSound, playShockSound, playAlertBeep, resumeAudio, speak } from '../utils/audio'
+import { getZone, DEFAULT_ZONE } from '../data/broselowTape'
 
-const ENERGY_OPTIONS = [50, 100, 150, 200, 360]
+const ADULT_ENERGY_OPTIONS = [50, 100, 150, 200, 360]
 
 export default function DefibrillatorPanel() {
   const { state, dispatch } = useSimulator()
   const { defib, currentRhythm } = state
   const rhythm = RHYTHMS[currentRhythm] || RHYTHMS.NSR
   const chargeTimerRef = useRef(null)
+  const isPals = state.mode === 'PALS'
+  const pediatricZone = isPals ? getZone(state.broselowZone || DEFAULT_ZONE) : null
+  const ENERGY_OPTIONS = isPals
+    ? [
+        pediatricZone.defibJoules.initial,
+        pediatricZone.defibJoules.subsequent,
+        Math.round(pediatricZone.defibJoules.subsequent * 1.5),
+      ]
+    : ADULT_ENERGY_OPTIONS
+  const defaultEnergy = isPals ? pediatricZone.defibJoules.initial : 200
 
   const [aedMode, setAedMode] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
@@ -64,7 +75,7 @@ export default function DefibrillatorPanel() {
     setAedAnalysis('analyzing')
     speak('Analyzing rhythm. Do not touch the patient.')
     if (!defib.charged && !defib.charging) {
-      dispatch({ type: 'SET_ENERGY', energy: 200 })
+      dispatch({ type: 'SET_ENERGY', energy: defaultEnergy })
     }
     setTimeout(() => {
       if (rhythm.shockable) {
@@ -158,7 +169,7 @@ export default function DefibrillatorPanel() {
             SYNC {defib.syncMode ? 'ON' : 'OFF'}
           </button>
 
-          <div className="grid grid-cols-5 gap-0.5">
+          <div className={`grid gap-0.5 ${isPals ? 'grid-cols-3' : 'grid-cols-5'}`}>
             {ENERGY_OPTIONS.map(j => (
               <button
                 key={j}

@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import MedicationReviewModal from './MedicationReviewModal'
 import { getMedication } from '../data/medications'
+import { getZone, DEFAULT_ZONE } from '../data/broselowTape'
 
-const MEDS = [
+const ACLS_MEDS = [
   { drug: 'Epinephrine',   dose: '1 mg IV/IO' },
   { drug: 'Amiodarone',    dose: '300 mg IV' },
   { drug: 'Amiodarone',    dose: '150 mg IV' },
@@ -16,6 +17,24 @@ const MEDS = [
   { drug: 'Dopamine',      dose: '2-20 mcg/kg/min' },
 ]
 
+// Pediatric med list — doses are calculated from the active Broselow zone's
+// weight-based reference doses (see src/data/broselowTape.js).
+function palsMeds(zoneKey) {
+  const z = getZone(zoneKey || DEFAULT_ZONE)
+  const d = z.doses
+  return [
+    { drug: 'Epinephrine',   dose: `${d.epinephrine.mg} mg IV/IO` },
+    { drug: 'Amiodarone',    dose: `${d.amiodarone.mg} mg IV/IO` },
+    { drug: 'Adenosine',     dose: `${d.adenosineFirst.mg} mg rapid IV (1st dose)` },
+    { drug: 'Adenosine',     dose: `${d.adenosineSecond.mg} mg rapid IV (2nd dose)` },
+    { drug: 'Atropine',      dose: `${d.atropine.mg} mg IV/IO` },
+    { drug: 'Lidocaine',     dose: `${d.lidocaine.mg} mg IV/IO` },
+    { drug: 'Magnesium',     dose: `${d.magnesium.mg} mg IV (Torsades)` },
+    { drug: 'Sodium Bicarb', dose: `${d.sodiumBicarb.mEq} mEq IV/IO` },
+    { drug: 'Dopamine',      dose: '2-20 mcg/kg/min' },
+  ]
+}
+
 function elapsed(ts) {
   const s = Math.floor((Date.now() - ts) / 1000)
   if (s < 60) return `${s}s`
@@ -26,9 +45,15 @@ export default function MedLogPanel() {
   const { state, dispatch } = useSimulator()
   const [selectedIdx, setSelectedIdx] = useState('')   // '' = nothing chosen yet
   const [learnDrug, setLearnDrug] = useState(null)     // drug name for the review modal
+  const isPals = state.mode === 'PALS'
+
+  const MEDS = useMemo(
+    () => isPals ? palsMeds(state.broselowZone) : ACLS_MEDS,
+    [isPals, state.broselowZone]
+  )
 
   const selected = selectedIdx === '' ? null : MEDS[selectedIdx]
-  const canLearn = selected && getMedication(selected.drug)
+  const canLearn = selected && getMedication(selected.drug, state.mode)
 
   function giveMed() {
     if (!selected) return
@@ -74,7 +99,7 @@ export default function MedLogPanel() {
           className="w-full rounded-lg border border-ecg-blue bg-ecg-blue/10 text-ecg-blue font-bold text-xs uppercase tracking-widest active:scale-95 transition-all hover:bg-ecg-blue/20 disabled:opacity-40 disabled:active:scale-100"
           style={{ minHeight: '36px' }}
         >
-          {selected ? `Learn ${selected.drug}` : 'ACLS Med Review'}
+          {selected ? `Learn ${selected.drug}` : isPals ? 'PALS Med Review' : 'ACLS Med Review'}
         </button>
       </div>
 
@@ -105,7 +130,7 @@ export default function MedLogPanel() {
       </div>
 
       {learnDrug && (
-        <MedicationReviewModal drug={learnDrug} onClose={() => setLearnDrug(null)} />
+        <MedicationReviewModal drug={learnDrug} mode={state.mode} onClose={() => setLearnDrug(null)} />
       )}
     </div>
   )

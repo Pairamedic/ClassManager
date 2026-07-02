@@ -15,8 +15,8 @@ const ACCENT_BG = {
   green: 'bg-ecg-green',
 }
 
-export default function MedicationReviewModal({ drug, onClose }) {
-  const med = getMedication(drug)
+export default function MedicationReviewModal({ drug, mode: simMode = 'ACLS', onClose }) {
+  const med = getMedication(drug, simMode)
   const [mode, setMode] = useState('review')          // 'review' | 'quiz' | 'result'
   const [current, setCurrent] = useState(0)
   const [answers, setAnswers] = useState({})           // { [questionIndex]: optionIndex }
@@ -106,7 +106,7 @@ export default function MedicationReviewModal({ drug, onClose }) {
                 Start Quiz →
               </button>
               <p className="text-[10px] text-ecg-gray pt-2 border-t border-ecg-border">
-                Teaching reference, AHA 2020 guidelines. Follow your program’s current protocols.
+                Teaching reference, AHA 2020 {simMode === 'PALS' ? 'PALS' : 'ACLS'} guidelines. Follow your program’s current protocols.
               </p>
             </div>
           )}

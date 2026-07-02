@@ -4,12 +4,17 @@ import ECGWaveform from './ECGWaveform'
 import EtCO2Waveform from './EtCO2Waveform'
 import VitalsDisplay from './VitalsDisplay'
 import TwelveLeadModal from './TwelveLeadModal'
+import BroselowTapeModal from './BroselowTapeModal'
 import { RHYTHMS } from '../data/rhythms'
+import { getZone, DEFAULT_ZONE } from '../data/broselowTape'
 
 export default function MonitorScreen() {
   const { state } = useSimulator()
   const rhythm = RHYTHMS[state.currentRhythm] || RHYTHMS.NSR
   const [show12Lead, setShow12Lead] = useState(false)
+  const [showBroselow, setShowBroselow] = useState(false)
+  const isPals = state.mode === 'PALS'
+  const zone = isPals ? getZone(state.broselowZone || DEFAULT_ZONE) : null
 
   const categoryColors = {
     normal:  'text-ecg-green',
@@ -36,6 +41,15 @@ export default function MonitorScreen() {
           )}
           {rhythm.shockable && (
             <span className="text-xs font-bold text-ecg-red">SHOCKABLE</span>
+          )}
+          {isPals && (
+            <button
+              onClick={() => setShowBroselow(true)}
+              className="flex items-center gap-1.5 text-[10px] font-bold font-mono px-2.5 py-1 rounded border border-ecg-border text-ecg-gray hover:text-ink hover:border-ecg-gray transition-colors uppercase tracking-widest"
+            >
+              <span className="w-2 h-2 rounded-full border border-black/20" style={{ backgroundColor: zone.hex }} />
+              {zone.label} · {zone.weightKg}kg
+            </button>
           )}
           <button
             onClick={() => setShow12Lead(true)}
@@ -66,6 +80,7 @@ export default function MonitorScreen() {
       <VitalsDisplay />
 
       {show12Lead && <TwelveLeadModal onClose={() => setShow12Lead(false)} />}
+      {showBroselow && <BroselowTapeModal onClose={() => setShowBroselow(false)} />}
     </div>
   )
 }

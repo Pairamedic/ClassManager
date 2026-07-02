@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import { RHYTHMS } from '../data/rhythms'
+import { getPediatricVitals } from '../data/pediatricVitals'
+import { DEFAULT_ZONE } from '../data/broselowTape'
 
 function map(sbp, dbp) {
   return Math.round(dbp + (sbp - dbp) / 3)
@@ -69,16 +71,23 @@ function VitalTile({ label, children, color = 'text-ecg-green', hidden, editable
 
 export default function VitalsDisplay() {
   const { state, dispatch } = useSimulator()
-  const { vitals: v, vitalsHidden: h, currentRhythm } = state
+  const { vitals: v, vitalsHidden: h, currentRhythm, mode, broselowZone } = state
   const rhythm = RHYTHMS[currentRhythm] || RHYTHMS.NSR
+  const isPals = mode === 'PALS'
+  const pv = isPals ? getPediatricVitals(broselowZone, DEFAULT_ZONE) : null
 
   const [editing, setEditing] = useState(null) // 'hr' | 'bp' | 'spo2' | 'etco2' | 'temp'
   const [draft, setDraft] = useState('')
 
   const displayHR = rhythm.pulse ? (v.hr || rhythm.rate) : 0
-  const hrColor = displayHR === 0 ? 'text-ecg-red' : displayHR > 100 ? 'text-ecg-amber' : displayHR < 60 ? 'text-ecg-blue' : 'text-ecg-green'
-  const spo2Color = v.spo2 < 90 ? 'text-ecg-red' : v.spo2 < 94 ? 'text-ecg-amber' : 'text-ecg-blue'
-  const bpColor = v.sbp === 0 ? 'text-ecg-red' : v.sbp < 90 ? 'text-ecg-amber' : 'text-ecg-green'
+  const hrColor = displayHR === 0 ? 'text-ecg-red'
+    : isPals
+      ? (displayHR > pv.hrHigh ? 'text-ecg-amber' : displayHR < pv.hrLow ? 'text-ecg-blue' : 'text-ecg-green')
+      : (displayHR > 100 ? 'text-ecg-amber' : displayHR < 60 ? 'text-ecg-blue' : 'text-ecg-green')
+  const spo2Min = isPals ? pv.spo2Min : 94
+  const spo2Color = v.spo2 < 90 ? 'text-ecg-red' : v.spo2 < spo2Min ? 'text-ecg-amber' : 'text-ecg-blue'
+  const sbpMin = isPals ? pv.sbpMin : 90
+  const bpColor = v.sbp === 0 ? 'text-ecg-red' : v.sbp < sbpMin ? 'text-ecg-amber' : 'text-ecg-green'
 
   function startEdit(field, initial) {
     if (h) return

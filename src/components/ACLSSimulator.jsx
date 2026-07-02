@@ -17,6 +17,7 @@ import AlgorithmModal from './AlgorithmModal'
 import SessionsModal from './SessionsModal'
 import GradebookModal from './GradebookModal'
 import ThemeToggle from './ThemeToggle'
+import { BROSELOW_ZONES, DEFAULT_ZONE, getZone } from '../data/broselowTape'
 
 function HeaderButton({ onClick, children }) {
   return (
@@ -85,6 +86,13 @@ export default function ACLSSimulator() {
           <span className="text-sm font-bold text-ink tracking-wide whitespace-nowrap">
             CM <span className="text-ecg-green">Simulator</span>
           </span>
+          {state.powered && (
+            <span className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded border tracking-widest uppercase hidden sm:inline ${
+              state.mode === 'PALS' ? 'border-ecg-blue text-ecg-blue' : 'border-ecg-green text-ecg-green'
+            }`}>
+              {state.mode === 'PALS' ? `PALS · ${getZone(state.broselowZone).label}` : 'ACLS'}
+            </span>
+          )}
           {state.powered && state.scenarioName && (
             <span className="text-xs text-ecg-gray font-mono tracking-wide truncate hidden md:inline">
               · {state.scenarioName}
@@ -191,20 +199,26 @@ export default function ACLSSimulator() {
 function PowerOnScreen() {
   const { dispatch } = useSimulator()
   const [members, setMembers] = useState(['', ''])
+  const [mode, setMode] = useState('ACLS')
+  const [zone, setZone] = useState(DEFAULT_ZONE)
 
   function updateMember(i, val) {
     setMembers(prev => prev.map((n, j) => j === i ? val : n))
   }
 
+  function powerOnPayload(teamMembers) {
+    return { type: 'POWER_ON', teamMembers, mode, broselowZone: mode === 'PALS' ? zone : null }
+  }
+
   function handlePowerOn() {
     const filtered = members.filter(n => n.trim())
-    dispatch({ type: 'POWER_ON', teamMembers: filtered })
+    dispatch(powerOnPayload(filtered))
   }
 
   const canStart = members.some(n => n.trim())
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-monitor-bg gap-8 p-6">
+    <div className="flex flex-1 flex-col items-center justify-center bg-monitor-bg gap-8 p-6 overflow-y-auto">
 
       {/* Branding */}
       <div className="flex flex-col items-center gap-3 opacity-30">
@@ -215,7 +229,57 @@ function PowerOnScreen() {
           />
         </svg>
         <div className="text-[14px] font-bold text-ecg-gray tracking-[0.3em] font-mono uppercase">CM Simulator</div>
-        <div className="text-[10px] text-ecg-gray tracking-[0.25em] font-mono uppercase">ACLS Training Monitor</div>
+        <div className="text-[10px] text-ecg-gray tracking-[0.25em] font-mono uppercase">
+          {mode === 'PALS' ? 'PALS Training Monitor' : 'ACLS Training Monitor'}
+        </div>
+      </div>
+
+      {/* Mode selector */}
+      <div className="w-full max-w-sm bg-surface border border-ecg-border rounded-2xl shadow-2xl p-6 space-y-4">
+        <div>
+          <h2 className="text-sm font-bold text-ink tracking-widest uppercase">Training Mode</h2>
+          <p className="text-[11px] text-ecg-gray mt-1">Choose ACLS (adult) or PALS (pediatric) for this session.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setMode('ACLS')}
+            className={`min-h-[48px] rounded-xl border-2 font-bold text-sm uppercase tracking-widest transition-all active:scale-95 ${
+              mode === 'ACLS' ? 'border-ecg-green text-ecg-green bg-ecg-green/10' : 'border-ecg-border text-ecg-gray hover:border-ecg-gray'
+            }`}
+          >
+            ACLS <span className="block text-[9px] font-normal normal-case tracking-normal">Adult</span>
+          </button>
+          <button
+            onClick={() => setMode('PALS')}
+            className={`min-h-[48px] rounded-xl border-2 font-bold text-sm uppercase tracking-widest transition-all active:scale-95 ${
+              mode === 'PALS' ? 'border-ecg-blue text-ecg-blue bg-ecg-blue/10' : 'border-ecg-border text-ecg-gray hover:border-ecg-gray'
+            }`}
+          >
+            PALS <span className="block text-[9px] font-normal normal-case tracking-normal">Pediatric</span>
+          </button>
+        </div>
+
+        {mode === 'PALS' && (
+          <div>
+            <p className="text-[10px] text-ecg-gray font-mono uppercase tracking-widest mb-1.5">Broselow Zone</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {BROSELOW_ZONES.map(z => (
+                <button
+                  key={z.key}
+                  onClick={() => setZone(z.key)}
+                  className={`flex flex-col items-center gap-1 rounded-lg border-2 px-1 py-2 transition-all active:scale-95 ${
+                    zone === z.key ? 'border-ink' : 'border-ecg-border hover:border-ecg-gray'
+                  }`}
+                  style={{ backgroundColor: `${z.hex}22` }}
+                >
+                  <span className="w-4 h-4 rounded-full border border-black/20" style={{ backgroundColor: z.hex }} />
+                  <span className="text-[9px] font-bold text-ink">{z.label}</span>
+                  <span className="text-[8px] text-ecg-gray font-mono">{z.weightRangeKg[0]}–{z.weightRangeKg[1]}kg</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Name entry card */}
@@ -274,7 +338,7 @@ function PowerOnScreen() {
       </div>
 
       <button
-        onClick={() => dispatch({ type: 'POWER_ON', teamMembers: [] })}
+        onClick={() => dispatch(powerOnPayload([]))}
         className="text-[11px] text-ecg-gray/50 hover:text-ecg-gray underline transition-colors"
       >
         Skip — power on without names

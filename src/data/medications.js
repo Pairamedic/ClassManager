@@ -534,7 +534,503 @@ export const MEDICATIONS = {
   },
 }
 
+// PALS Medication Review content — pediatric weight-based dosing, keyed by the
+// same drug names as MEDICATIONS. Teaching reference, AHA 2020 PALS guidelines.
+export const PEDIATRIC_MEDICATIONS = {
+  Epinephrine: {
+    name: 'Epinephrine',
+    accent: 'red',
+    tagline: 'Vasopressor — first-line in pediatric cardiac arrest',
+    sections: [
+      {
+        heading: 'Class & Action',
+        points: [
+          'Endogenous catecholamine with α- and β-adrenergic activity.',
+          'α-1 vasoconstriction raises aortic diastolic pressure, improving coronary and cerebral perfusion during CPR.',
+          'β effects increase heart rate and contractility.',
+        ],
+      },
+      {
+        heading: 'Indications',
+        points: [
+          'All pediatric cardiac arrest rhythms: VF, pulseless VT, asystole, PEA.',
+          'Symptomatic bradycardia with poor perfusion unresponsive to oxygenation/ventilation.',
+          'Anaphylaxis and severe hypotension/shock.',
+        ],
+      },
+      {
+        heading: 'Dose',
+        points: [
+          'Arrest: 0.01 mg/kg (0.1 mL/kg of 1:10,000) IV/IO every 3–5 minutes, max single dose 1 mg.',
+          'Use the Broselow zone weight to calculate the exact mg dose.',
+          'Bradycardia infusion: 0.1–1 mcg/kg/min, titrate to effect.',
+        ],
+      },
+      {
+        heading: 'Cautions',
+        points: [
+          'Weight-based dosing is essential — verify against the Broselow zone before giving.',
+          'Do not mix with sodium bicarbonate (inactivated by alkaline solutions).',
+          'Flush with saline and raise the limb after peripheral IV/IO push.',
+        ],
+      },
+    ],
+    quiz: [
+      {
+        q: 'What is the standard IV/IO dose of epinephrine in pediatric cardiac arrest?',
+        options: ['0.01 mg/kg every 3–5 min', '1 mg flat every 10 min', '0.1 mg/kg once', '5 mg/kg once'],
+        answer: 0,
+      },
+      {
+        q: 'What is the maximum single dose of epinephrine in a pediatric arrest, regardless of weight?',
+        options: ['0.5 mg', '1 mg', '2 mg', 'No maximum'],
+        answer: 1,
+      },
+      {
+        q: 'Which receptor effect of epinephrine most improves coronary perfusion during CPR?',
+        options: ['α-1 vasoconstriction', 'β-2 bronchodilation', 'Muscarinic blockade', 'Sodium-channel blockade'],
+        answer: 0,
+      },
+      {
+        q: 'Before giving weight-based epinephrine, what should you confirm?',
+        options: ['The patient\'s age in months only', 'The Broselow zone / estimated weight', 'The rhythm on the monitor only', 'Nothing — dose is always 1 mg'],
+        answer: 1,
+      },
+    ],
+  },
+
+  Amiodarone: {
+    name: 'Amiodarone',
+    accent: 'amber',
+    tagline: 'Antiarrhythmic — shock-refractory pediatric VF/pulseless VT',
+    sections: [
+      {
+        heading: 'Class & Action',
+        points: [
+          'Class III antiarrhythmic that prolongs the action potential and refractory period.',
+          'Also has sodium-, potassium-, calcium-channel and β-blocking properties.',
+          'Stabilizes cardiac membranes and raises the fibrillation threshold.',
+        ],
+      },
+      {
+        heading: 'Indications',
+        points: [
+          'VF or pulseless VT unresponsive to CPR, defibrillation, and epinephrine.',
+          'Stable wide-complex tachycardia / VT with a pulse.',
+          'SVT refractory to adenosine/vagal maneuvers (specialist-guided).',
+        ],
+      },
+      {
+        heading: 'Dose',
+        points: [
+          '5 mg/kg IV/IO bolus, max single dose 300 mg.',
+          'May repeat up to two times for refractory VF/pulseless VT, max cumulative 15 mg/kg/day.',
+          'Stable VT (with pulse): 5 mg/kg over 20–60 minutes.',
+        ],
+      },
+      {
+        heading: 'Cautions',
+        points: [
+          'May cause hypotension and bradycardia (especially with fast infusion).',
+          'Can prolong the QT interval — avoid combining with other QT-prolonging drugs.',
+          'Given after epinephrine in the shockable-rhythm sequence.',
+        ],
+      },
+    ],
+    quiz: [
+      {
+        q: 'What is the pediatric amiodarone dose in refractory VF/pulseless VT?',
+        options: ['1 mg/kg', '5 mg/kg (max 300 mg)', '0.02 mg/kg', '50 mg/kg'],
+        answer: 1,
+      },
+      {
+        q: 'Amiodarone is primarily classified as which type of antiarrhythmic?',
+        options: ['Class I (sodium blocker)', 'Class II (β-blocker)', 'Class III (potassium blocker)', 'Class IV (calcium blocker)'],
+        answer: 2,
+      },
+      {
+        q: 'How many times may the pediatric amiodarone bolus be repeated in refractory arrest?',
+        options: ['Never repeated', 'Up to two times', 'Up to five times', 'Unlimited'],
+        answer: 1,
+      },
+      {
+        q: 'Amiodarone is indicated in pediatric arrest only after which interventions have failed?',
+        options: ['Only after atropine', 'CPR, defibrillation, and epinephrine', 'Only after adenosine', 'It is given before any CPR'],
+        answer: 1,
+      },
+    ],
+  },
+
+  Adenosine: {
+    name: 'Adenosine',
+    accent: 'blue',
+    tagline: 'Antiarrhythmic — pediatric SVT',
+    sections: [
+      {
+        heading: 'Class & Action',
+        points: [
+          'Endogenous nucleoside that briefly slows AV-node conduction.',
+          'Interrupts reentry circuits that pass through the AV node.',
+          'Very short half-life (< 10 seconds).',
+        ],
+      },
+      {
+        heading: 'Indications',
+        points: [
+          'Regular, narrow-complex SVT — the most common significant pediatric tachyarrhythmia.',
+          'Distinguishing SVT (typically >220 bpm infant / >180 bpm child, abrupt onset, no beat-to-beat variability) from sinus tachycardia.',
+          'Not effective for atrial fibrillation, flutter, or VT.',
+        ],
+      },
+      {
+        heading: 'Dose',
+        points: [
+          'First dose: 0.1 mg/kg rapid IV/IO push, max 6 mg.',
+          'Second dose: 0.2 mg/kg rapid IV/IO push if no conversion, max 12 mg.',
+          'Follow each dose with a rapid saline flush; use the largest, most proximal vein available.',
+        ],
+      },
+      {
+        heading: 'Cautions',
+        points: [
+          'Expect a brief period of asystole/flushing/discomfort — warn caregivers.',
+          'Try vagal maneuvers first if the child is stable and it will not delay treatment.',
+          'Use caution in reactive airway disease.',
+        ],
+      },
+    ],
+    quiz: [
+      {
+        q: 'What is the first pediatric dose of adenosine for SVT?',
+        options: ['0.01 mg/kg', '0.1 mg/kg rapid IV push (max 6 mg)', '1 mg/kg slow IV', '5 mg/kg IV'],
+        answer: 1,
+      },
+      {
+        q: 'If the first dose fails to convert SVT, the second adenosine dose is:',
+        options: ['0.1 mg/kg again', '0.2 mg/kg (max 12 mg)', '1 mg/kg', 'No second dose is given'],
+        answer: 1,
+      },
+      {
+        q: 'A key feature distinguishing SVT from sinus tachycardia in a child is:',
+        options: ['Gradual onset with variable rate', 'Abrupt onset with a fixed, very rapid rate and no beat-to-beat variability', 'Always a wide QRS', 'Only occurs in adolescents'],
+        answer: 1,
+      },
+      {
+        q: 'What should be tried before adenosine in a stable child with SVT, if it will not delay care?',
+        options: ['Vagal maneuvers', 'Defibrillation', 'Atropine', 'Sodium bicarbonate'],
+        answer: 0,
+      },
+    ],
+  },
+
+  Atropine: {
+    name: 'Atropine',
+    accent: 'green',
+    tagline: 'Anticholinergic — pediatric symptomatic bradycardia',
+    sections: [
+      {
+        heading: 'Class & Action',
+        points: [
+          'Anticholinergic (muscarinic antagonist).',
+          'Blocks vagal tone at the SA and AV nodes, increasing heart rate.',
+          'Most useful for bradycardia from increased vagal tone (e.g., during intubation).',
+        ],
+      },
+      {
+        heading: 'Indications',
+        points: [
+          'Symptomatic bradycardia due to increased vagal tone or primary AV block.',
+          'Pre-intubation to blunt vagal-mediated bradycardia in select cases.',
+          'Note: in children, bradycardia is most often from hypoxia — prioritize oxygenation/ventilation first.',
+        ],
+      },
+      {
+        heading: 'Dose',
+        points: [
+          '0.02 mg/kg IV/IO.',
+          'Minimum single dose 0.1 mg (to avoid paradoxical bradycardia); max single dose 0.5 mg.',
+          'May repeat once; max total dose 1 mg (child) / 3 mg (adolescent).',
+        ],
+      },
+      {
+        heading: 'Cautions',
+        points: [
+          'Doses below 0.1 mg may cause paradoxical bradycardia.',
+          'Does not treat hypoxia-driven bradycardia — ensure adequate oxygenation/ventilation and epinephrine first.',
+          'Ineffective in high-grade AV block — do not delay pacing/epinephrine.',
+        ],
+      },
+    ],
+    quiz: [
+      {
+        q: 'What is the pediatric atropine dose for symptomatic bradycardia?',
+        options: ['0.02 mg/kg (min 0.1 mg, max 0.5 mg)', '1 mg flat dose', '5 mg/kg', '0.5 mg/kg'],
+        answer: 0,
+      },
+      {
+        q: 'Why is there a minimum single dose for atropine?',
+        options: ['To save drug supply', 'Doses that are too low can cause paradoxical bradycardia', 'It tastes bad', 'It is required by law'],
+        answer: 1,
+      },
+      {
+        q: 'In children, bradycardia is most commonly caused by:',
+        options: ['Primary cardiac disease', 'Hypoxia', 'Hyperthyroidism', 'Medication overdose only'],
+        answer: 1,
+      },
+      {
+        q: 'Before giving atropine for bradycardia in a child, you should first ensure:',
+        options: ['Adequate oxygenation and ventilation', 'The child has eaten recently', 'IV access in the leg specifically', 'A 12-lead ECG has been done'],
+        answer: 0,
+      },
+    ],
+  },
+
+  Lidocaine: {
+    name: 'Lidocaine',
+    accent: 'blue',
+    tagline: 'Antiarrhythmic — alternative to amiodarone in pediatric arrest',
+    sections: [
+      {
+        heading: 'Class & Action',
+        points: [
+          'Class Ib antiarrhythmic (sodium-channel blocker).',
+          'Suppresses ventricular ectopy and raises the VF threshold.',
+          'Shortens the action-potential duration in ventricular tissue.',
+        ],
+      },
+      {
+        heading: 'Indications',
+        points: [
+          'Alternative to amiodarone in shock-refractory pediatric VF / pulseless VT.',
+          'Stable ventricular tachycardia with a pulse.',
+        ],
+      },
+      {
+        heading: 'Dose',
+        points: [
+          '1 mg/kg IV/IO loading dose.',
+          'Maintenance infusion: 20–50 mcg/kg/min after return of circulation.',
+        ],
+      },
+      {
+        heading: 'Cautions',
+        points: [
+          'Toxicity: altered mental status, seizures, bradycardia.',
+          'Reduce dose in hepatic dysfunction or low cardiac output states.',
+          'Do not combine routinely with amiodarone (additive proarrhythmia).',
+        ],
+      },
+    ],
+    quiz: [
+      {
+        q: 'What is the initial IV/IO loading dose of lidocaine in pediatric cardiac arrest?',
+        options: ['0.1 mg/kg', '1 mg/kg', '5 mg/kg', '50 mg/kg'],
+        answer: 1,
+      },
+      {
+        q: 'Lidocaine is classified as which antiarrhythmic type?',
+        options: ['Class Ib (sodium blocker)', 'Class II (β-blocker)', 'Class III (potassium blocker)', 'Class IV (calcium blocker)'],
+        answer: 0,
+      },
+      {
+        q: 'Lidocaine is primarily used as a pediatric alternative to which arrest drug?',
+        options: ['Epinephrine', 'Atropine', 'Amiodarone', 'Adenosine'],
+        answer: 2,
+      },
+      {
+        q: 'A sign of lidocaine toxicity in a child is:',
+        options: ['Hypertension', 'Altered mental status / seizures', 'Polyuria', 'Rash only'],
+        answer: 1,
+      },
+    ],
+  },
+
+  Magnesium: {
+    name: 'Magnesium',
+    accent: 'green',
+    tagline: 'Electrolyte — pediatric torsades de pointes',
+    sections: [
+      {
+        heading: 'Class & Action',
+        points: [
+          'Essential electrolyte and cofactor that stabilizes cardiac membranes.',
+          'Suppresses early afterdepolarizations that trigger torsades.',
+          'Helps correct the substrate in QT-prolongation.',
+        ],
+      },
+      {
+        heading: 'Indications',
+        points: [
+          'Torsades de pointes (polymorphic VT with a long QT).',
+          'Suspected hypomagnesemia (e.g., severe asthma, malnutrition).',
+        ],
+      },
+      {
+        heading: 'Dose',
+        points: [
+          '25–50 mg/kg IV/IO, max 2 g, given over 10–20 minutes (faster if pulseless torsades).',
+        ],
+      },
+      {
+        heading: 'Cautions',
+        points: [
+          'Rapid administration can cause hypotension and bradycardia.',
+          'Excess magnesium causes flushing, respiratory depression, and loss of reflexes.',
+          'Use caution in renal impairment.',
+        ],
+      },
+    ],
+    quiz: [
+      {
+        q: 'Magnesium sulfate is specifically indicated for which pediatric rhythm?',
+        options: ['Asystole', 'Torsades de pointes', 'Atrial fibrillation', 'Sinus bradycardia'],
+        answer: 1,
+      },
+      {
+        q: 'What is the pediatric magnesium dose range for torsades?',
+        options: ['0.5–1 mg/kg', '25–50 mg/kg (max 2 g)', '100 mg/kg', '1 g/kg'],
+        answer: 1,
+      },
+      {
+        q: 'Torsades de pointes is associated with what ECG finding?',
+        options: ['Short PR interval', 'Prolonged QT interval', 'Delta wave', 'ST depression only'],
+        answer: 1,
+      },
+      {
+        q: 'Which is a risk of giving magnesium too rapidly?',
+        options: ['Hypertension', 'Tachycardia', 'Hypotension and bradycardia', 'Hyperreflexia'],
+        answer: 2,
+      },
+    ],
+  },
+
+  'Sodium Bicarb': {
+    name: 'Sodium Bicarbonate',
+    accent: 'amber',
+    tagline: 'Buffer — specific pediatric arrest circumstances',
+    sections: [
+      {
+        heading: 'Class & Action',
+        points: [
+          'Alkalinizing buffer that neutralizes metabolic acid.',
+          'Shifts potassium back into cells (helps hyperkalemia).',
+          'Enhances protein binding of tricyclic antidepressants.',
+        ],
+      },
+      {
+        heading: 'Indications',
+        points: [
+          'Known pre-existing metabolic acidosis or hyperkalemia.',
+          'Tricyclic antidepressant or other sodium-channel-blocker overdose.',
+          'Not recommended for routine use in pediatric cardiac arrest.',
+        ],
+      },
+      {
+        heading: 'Dose',
+        points: [
+          '1 mEq/kg IV/IO initial dose, diluted appropriately for the patient\'s size.',
+          'Guide further dosing with blood gas / bicarbonate levels when available.',
+        ],
+      },
+      {
+        heading: 'Cautions',
+        points: [
+          'Inactivates catecholamines (epinephrine) and precipitates calcium — flush the line.',
+          'Can cause metabolic alkalosis, hypernatremia, and hyperosmolality.',
+          'Does not replace adequate ventilation for clearing CO₂.',
+        ],
+      },
+    ],
+    quiz: [
+      {
+        q: 'What is the typical initial pediatric dose of sodium bicarbonate?',
+        options: ['0.1 mEq/kg', '1 mEq/kg', '10 mEq/kg', '1 mg/kg'],
+        answer: 1,
+      },
+      {
+        q: 'Sodium bicarbonate is specifically indicated in which pediatric situation?',
+        options: ['Routine cardiac arrest', 'Known hyperkalemia or TCA overdose', 'Torsades de pointes', 'Stable SVT'],
+        answer: 1,
+      },
+      {
+        q: 'Why should sodium bicarbonate not share a line with epinephrine or calcium?',
+        options: ['It is too viscous', 'It inactivates catecholamines and precipitates calcium', 'It is light-sensitive', 'It causes clotting'],
+        answer: 1,
+      },
+      {
+        q: 'Sodium bicarbonate for routine pediatric cardiac arrest is:',
+        options: ['Strongly recommended', 'Not recommended', 'First-line', 'Required before epinephrine'],
+        answer: 1,
+      },
+    ],
+  },
+
+  Dopamine: {
+    name: 'Dopamine',
+    accent: 'red',
+    tagline: 'Vasopressor / inotrope — pediatric bradycardia & shock',
+    sections: [
+      {
+        heading: 'Class & Action',
+        points: [
+          'Catecholamine with dose-dependent receptor effects.',
+          'Moderate doses (β-1) increase heart rate and contractility.',
+          'Higher doses (α-1) cause vasoconstriction and raise blood pressure.',
+        ],
+      },
+      {
+        heading: 'Indications',
+        points: [
+          'Symptomatic bradycardia unresponsive to oxygenation/ventilation/epinephrine.',
+          'Fluid-refractory shock after return of spontaneous circulation.',
+        ],
+      },
+      {
+        heading: 'Dose',
+        points: [
+          'Infusion: 2–20 mcg/kg/min, titrated to response.',
+          'Titrate to target heart rate, perfusion, and blood pressure for age.',
+          'Administer via infusion pump, ideally through a central or reliable IO/IV line.',
+        ],
+      },
+      {
+        heading: 'Cautions',
+        points: [
+          'Can cause tachyarrhythmias and increased myocardial oxygen demand.',
+          'Correct hypovolemia with fluid boluses before starting.',
+          'Extravasation causes tissue necrosis (α-mediated vasoconstriction).',
+        ],
+      },
+    ],
+    quiz: [
+      {
+        q: 'What is the usual pediatric dopamine infusion range?',
+        options: ['0.1–0.5 mcg/kg/min', '2–20 mcg/kg/min', '1 mg/kg bolus', '50 mcg/kg/min flat'],
+        answer: 1,
+      },
+      {
+        q: 'Dopamine is considered for pediatric bradycardia when what has already been tried?',
+        options: ['Oxygenation/ventilation and epinephrine', 'Nothing — it is always first-line', 'Only adenosine', 'Only magnesium'],
+        answer: 0,
+      },
+      {
+        q: 'At higher infusion rates, dopamine primarily acts on which receptors to raise BP?',
+        options: ['α-1 (vasoconstriction)', 'Muscarinic', 'β-2 (bronchodilation)', 'Sodium channels'],
+        answer: 0,
+      },
+      {
+        q: 'What should be corrected before starting a dopamine infusion for shock?',
+        options: ['Hypovolemia (give fluid boluses)', 'Hypercarbia', 'Hyperglycemia', 'Fever'],
+        answer: 0,
+      },
+    ],
+  },
+}
+
 // Look up the review entry for a given med "drug" string from MedLogPanel.
-export function getMedication(drug) {
+// mode 'PALS' returns the pediatric entry (falling back to the adult one if
+// a pediatric version doesn't exist for that drug).
+export function getMedication(drug, mode = 'ACLS') {
+  if (mode === 'PALS') return PEDIATRIC_MEDICATIONS[drug] || MEDICATIONS[drug] || null
   return MEDICATIONS[drug] || null
 }
