@@ -220,6 +220,7 @@ export const SCENARIOS = [
     captureThreshold: 999,
     vitals: { hr: 0, sbp: 0, dbp: 0, spo2: 0, etco2: 6, temp: 97.4 },
     vitalsHidden: false,
+    reversibleCauses: ['hypoxia'],
   },
   {
     id: 'peds_pea_hypovolemic',
@@ -232,6 +233,7 @@ export const SCENARIOS = [
     captureThreshold: 999,
     vitals: { hr: 70, sbp: 0, dbp: 0, spo2: 0, etco2: 9, temp: 97.2 },
     vitalsHidden: false,
+    reversibleCauses: ['hypovolemia', 'hydrogen'],
   },
   {
     id: 'peds_pulseless_vt',
@@ -296,6 +298,7 @@ export const SCENARIOS = [
     captureThreshold: 60,
     vitals: { hr: 48, sbp: 70, dbp: 40, spo2: 78, etco2: 30, temp: 98.2 },
     vitalsHidden: true,
+    reversibleCauses: ['hypoxia'],
   },
   {
     id: 'peds_complete_block',
@@ -372,6 +375,7 @@ export const SCENARIOS = [
     captureThreshold: 60,
     vitals: { hr: 170, sbp: 80, dbp: 40, spo2: 93, etco2: 30, temp: 103.1 },
     vitalsHidden: true,
+    reversibleCauses: ['hypovolemia', 'hydrogen'],
   },
   {
     id: 'peds_hypovolemic_shock',
@@ -384,6 +388,7 @@ export const SCENARIOS = [
     captureThreshold: 60,
     vitals: { hr: 175, sbp: 82, dbp: 46, spo2: 96, etco2: 30, temp: 98.6 },
     vitalsHidden: true,
+    reversibleCauses: ['hypovolemia', 'hydrogen'],
   },
 
   // ── PALS · NORMAL / BASELINE ─────────────────────────────────────────────────
