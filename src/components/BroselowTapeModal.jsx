@@ -42,6 +42,7 @@ export default function BroselowTapeModal({ onClose }) {
                     style={{ backgroundColor: z.hex }}
                   />
                   <span className="text-[10px] font-bold text-ink">{z.label}</span>
+                  <span className="text-[9px] text-ink/70 font-mono leading-tight text-center">{z.ageLabel}</span>
                   <span className="text-[9px] text-ecg-gray font-mono">{z.weightRangeKg[0]}–{z.weightRangeKg[1]} kg</span>
                 </button>
               )

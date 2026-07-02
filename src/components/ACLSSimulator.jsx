@@ -17,7 +17,7 @@ import AlgorithmModal from './AlgorithmModal'
 import SessionsModal from './SessionsModal'
 import GradebookModal from './GradebookModal'
 import ThemeToggle from './ThemeToggle'
-import { BROSELOW_ZONES, DEFAULT_ZONE, getZone } from '../data/broselowTape'
+import { DEFAULT_ZONE, getZone } from '../data/broselowTape'
 
 function HeaderButton({ onClick, children }) {
   return (
@@ -200,7 +200,9 @@ function PowerOnScreen() {
   const { dispatch } = useSimulator()
   const [members, setMembers] = useState(['', ''])
   const [mode, setMode] = useState('ACLS')
-  const [zone, setZone] = useState(DEFAULT_ZONE)
+  // PALS sessions start in the default Broselow zone; it's adjusted in-sim on
+  // the CPR bar's zone control rather than at power-on (keeps this card compact).
+  const [zone] = useState(DEFAULT_ZONE)
 
   function updateMember(i, val) {
     setMembers(prev => prev.map((n, j) => j === i ? val : n))
@@ -260,24 +262,13 @@ function PowerOnScreen() {
         </div>
 
         {mode === 'PALS' && (
-          <div>
-            <p className="text-[10px] text-ecg-gray font-mono uppercase tracking-widest mb-1.5">Broselow Zone</p>
-            <div className="grid grid-cols-3 gap-1.5">
-              {BROSELOW_ZONES.map(z => (
-                <button
-                  key={z.key}
-                  onClick={() => setZone(z.key)}
-                  className={`flex flex-col items-center gap-1 rounded-lg border-2 px-1 py-2 transition-all active:scale-95 ${
-                    zone === z.key ? 'border-ink' : 'border-ecg-border hover:border-ecg-gray'
-                  }`}
-                  style={{ backgroundColor: `${z.hex}22` }}
-                >
-                  <span className="w-4 h-4 rounded-full border border-black/20" style={{ backgroundColor: z.hex }} />
-                  <span className="text-[9px] font-bold text-ink">{z.label}</span>
-                  <span className="text-[8px] text-ecg-gray font-mono">{z.weightRangeKg[0]}–{z.weightRangeKg[1]}kg</span>
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center gap-2 rounded-lg border border-ecg-border bg-surface2 px-3 py-2">
+            <span className="w-3 h-3 rounded-full border border-black/20 shrink-0" style={{ backgroundColor: getZone(zone).hex }} />
+            <p className="text-[10px] text-ecg-gray leading-snug">
+              Starts in the <span className="font-bold text-ink">{getZone(zone).label}</span> Broselow zone
+              <span className="font-mono text-ecg-gray"> ({getZone(zone).ageLabel} · {getZone(zone).weightKg}kg)</span>.
+              Switch it any time from the zone control on the CPR bar.
+            </p>
           </div>
         )}
       </div>
