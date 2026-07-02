@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
+import MedicationReviewModal from './MedicationReviewModal'
+import { getMedication } from '../data/medications'
 
 const MEDS = [
   { drug: 'Epinephrine',   dose: '1 mg IV/IO' },
@@ -23,8 +25,10 @@ function elapsed(ts) {
 export default function MedLogPanel() {
   const { state, dispatch } = useSimulator()
   const [selectedIdx, setSelectedIdx] = useState('')   // '' = nothing chosen yet
+  const [learnDrug, setLearnDrug] = useState(null)     // drug name for the review modal
 
   const selected = selectedIdx === '' ? null : MEDS[selectedIdx]
+  const canLearn = selected && getMedication(selected.drug)
 
   function giveMed() {
     if (!selected) return
@@ -63,6 +67,15 @@ export default function MedLogPanel() {
         >
           {selected ? `Give ${selected.drug}` : 'Select a medication'}
         </button>
+
+        <button
+          onClick={() => selected && setLearnDrug(selected.drug)}
+          disabled={!canLearn}
+          className="w-full rounded-lg border border-ecg-blue bg-ecg-blue/10 text-ecg-blue font-bold text-xs uppercase tracking-widest active:scale-95 transition-all hover:bg-ecg-blue/20 disabled:opacity-40 disabled:active:scale-100"
+          style={{ minHeight: '36px' }}
+        >
+          {selected ? `Learn ${selected.drug}` : 'ACLS Med Review'}
+        </button>
       </div>
 
       {/* ── Right: med log ── */}
@@ -90,6 +103,10 @@ export default function MedLogPanel() {
           ))
         )}
       </div>
+
+      {learnDrug && (
+        <MedicationReviewModal drug={learnDrug} onClose={() => setLearnDrug(null)} />
+      )}
     </div>
   )
 }
