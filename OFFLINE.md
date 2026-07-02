@@ -66,6 +66,43 @@ Runs the same offline app with hot reload for editing.
 
 ---
 
+## Build a Windows `.exe` (desktop app)
+
+If you'd rather hand someone a real double-click Windows program instead of a
+browser tab, the project can also package the offline app with **Electron**.
+
+> **Must be built on Windows.** A Windows `.exe` can only be produced on a
+> Windows machine (or a Windows CI runner). Run these on the Windows PC.
+
+One-time (needs internet the first time to download Node + Electron):
+
+```
+npm install
+```
+
+Then build the installer:
+
+```
+npm run dist:win
+```
+
+This runs the offline build and packages it. You'll find the installer in the
+`release\` folder (e.g. `CM Simulator Setup 1.0.0.exe`). Run it to install CM
+Simulator with a desktop + Start-menu shortcut. The installed app runs fully
+offline — no internet, no Firebase, no login — same as the offline web build.
+
+To just try the desktop app without making an installer:
+
+```
+npm run desktop
+```
+
+(`npm run dist:mac` and `npm run dist:linux` produce a macOS `.dmg` and a Linux
+`AppImage` respectively, each on its own OS.)
+
+The desktop wrapper lives in `electron/main.js` and simply loads the existing
+`dist\` offline build in a native window — it does not change the web app.
+
 ## How the switch works (for reference)
 
 Offline mode is controlled by `VITE_OFFLINE=1` in `.env.offline`, which the
