@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import { RHYTHMS } from '../data/rhythms'
 import { playChargeSound, playShockSound, playAlertBeep, resumeAudio, speak } from '../utils/audio'
+import { feedbackTap, feedbackBump } from '../utils/feedback'
 import { getZone, DEFAULT_ZONE } from '../data/broselowTape'
 
 const ADULT_ENERGY_OPTIONS = [50, 100, 150, 200, 360]
@@ -30,12 +31,14 @@ export default function DefibrillatorPanel() {
 
   function handlePads() {
     resumeAudio()
+    feedbackTap()
     dispatch({ type: 'TOGGLE_PADS' })
   }
 
   function handleCharge() {
     if (!defib.padsConnected || defib.charging || defib.charged) return
     resumeAudio()
+    feedbackTap()
     dispatch({ type: 'START_CHARGING' })
     playChargeSound()
     speak('Charging')
@@ -49,6 +52,7 @@ export default function DefibrillatorPanel() {
   // Actual energy delivery — only reached after a CLEAR confirmation.
   function deliverShock() {
     resumeAudio()
+    feedbackBump()
     speak('Stay clear.')
     setTimeout(() => {
       playShockSound()
@@ -173,7 +177,7 @@ export default function DefibrillatorPanel() {
             {ENERGY_OPTIONS.map(j => (
               <button
                 key={j}
-                onClick={() => dispatch({ type: 'SET_ENERGY', energy: j })}
+                onClick={() => { feedbackTap(); dispatch({ type: 'SET_ENERGY', energy: j }) }}
                 className={`py-2 rounded text-[10px] font-bold border transition-colors
                   ${defib.energy === j
                     ? 'bg-ecg-blue text-black border-ecg-blue'
@@ -224,7 +228,7 @@ export default function DefibrillatorPanel() {
         </div>
       ) : (
         <button
-          onClick={() => canShock && setConfirmClear(true)}
+          onClick={() => { if (canShock) { feedbackTap(); setConfirmClear(true) } }}
           disabled={!canShock}
           className={`w-full min-h-[52px] rounded font-bold text-base tracking-widest uppercase border-2 transition-all
             ${canShock

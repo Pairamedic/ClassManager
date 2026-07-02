@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import { RHYTHMS } from '../data/rhythms'
 import { playMetronomeClick, playAlertBeep, resumeAudio } from '../utils/audio'
+import { feedbackTap, feedbackBump } from '../utils/feedback'
 import { getZone, DEFAULT_ZONE, BROSELOW_ZONES } from '../data/broselowTape'
 import BroselowTapeModal from './BroselowTapeModal'
 
@@ -96,9 +97,9 @@ export default function CodeStatusBar() {
 
   const checkDue = cpr.active && cycleRemaining <= 0
 
-  function start() { resumeAudio(); dispatch({ type: 'START_CPR' }) }
-  function stop() { dispatch({ type: 'STOP_CPR' }) }
-  function rhythmCheck() { resumeAudio(); dispatch({ type: 'CPR_RHYTHM_CHECK' }) }
+  function start() { resumeAudio(); feedbackBump(); dispatch({ type: 'START_CPR' }) }
+  function stop() { feedbackBump(); dispatch({ type: 'STOP_CPR' }) }
+  function rhythmCheck() { resumeAudio(); feedbackTap(); dispatch({ type: 'CPR_RHYTHM_CHECK' }) }
 
   return (
     <div className="flex items-stretch gap-2 px-2 py-1.5 bg-surface border-t border-ecg-border shrink-0 overflow-x-auto"
@@ -208,8 +209,10 @@ function ZoneStepper() {
 
   function step(delta) {
     const next = BROSELOW_ZONES[Math.min(BROSELOW_ZONES.length - 1, Math.max(0, idx + delta))]
-    if (next && next.key !== zone.key)
+    if (next && next.key !== zone.key) {
+      feedbackTap()
       dispatch({ type: 'SET_BROSELOW_ZONE', zone: next.key, applyDefaults: true })
+    }
   }
 
   return (

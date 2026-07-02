@@ -4,6 +4,7 @@ import { RHYTHM_LIST } from '../data/rhythms'
 import { useContent } from '../context/ContentContext'
 import { firebaseReady } from '../firebase'
 import { saveScenario, loadScenarios, deleteScenario } from '../utils/scenarioStore'
+import StemiTerritoryToggle from './StemiTerritoryToggle'
 
 // ── Scenario parser ───────────────────────────────────────────────────────────
 const RHYTHM_ALIASES = {
@@ -206,7 +207,9 @@ export default function InstructorPanel({ onEndSession, onOpenGradebook }) {
           {/* QUICK SCENARIOS — grouped by AHA category */}
           <CollapsibleSection title="Quick Scenarios">
             {SCENARIO_GROUPS.map(group => {
-              const groupScenarios = SCENARIOS.filter(sc => sc.group === group.key)
+              const groupScenarios = SCENARIOS.filter(
+                sc => sc.group === group.key && (sc.mode || 'ACLS') === state.mode
+              )
               if (!groupScenarios.length) return null
               return (
                 <div key={group.key} className="mb-3 last:mb-0">
@@ -301,6 +304,11 @@ export default function InstructorPanel({ onEndSession, onOpenGradebook }) {
                 </div>
               )
             })}
+          </CollapsibleSection>
+
+          {/* STEMI TERRITORY — localizes the injury on the 12-lead */}
+          <CollapsibleSection title="STEMI Territory">
+            <StemiTerritoryToggle />
           </CollapsibleSection>
 
           {/* VITALS EDITOR */}

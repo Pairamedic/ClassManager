@@ -3,6 +3,7 @@ import { RHYTHMS } from '../data/rhythms'
 import { loadLiveState, saveLiveState } from '../utils/livePersist'
 import { getPediatricVitals } from '../data/pediatricVitals'
 import { DEFAULT_ZONE, getZone } from '../data/broselowTape'
+import { EMPTY_LEADS, limbLeadsConnected, precordialConnected } from '../data/leads'
 
 const Ctx = createContext(null)
 
@@ -12,6 +13,10 @@ export const initialState = {
 
   currentRhythm: 'NSR',
   isRunning: true,
+
+  // STEMI localization shown on the 12-lead (null = no injury pattern). See
+  // STEMI_TERRITORIES in src/data/leadProfiles.js.
+  stemiTerritory: null,
 
   vitals: { hr: 72, sbp: 120, dbp: 80, spo2: 98, etco2: 35, temp: 98.6 },
   vitalsHidden: false,
@@ -35,6 +40,11 @@ export const initialState = {
     output: 50,
     captureThreshold: 60,
   },
+
+  // ECG limb electrodes the learner places on the patient (color per limb, or
+  // null). The monitor shows LEAD FAULT until these are correct or defib pads
+  // are connected. See src/data/leads.js.
+  leads: { ...EMPTY_LEADS },
 
   cpr: {
     active: false,
@@ -200,6 +210,37 @@ function reducer(state, action) {
       return { ...state, pacer: { ...state.pacer, output } }
     }
 
+    case 'PLACE_ELECTRODE': {
+      // Assign a colored electrode to a limb (or clear it if the same color is
+      // tapped again). Log the moment all four snap into the correct spots.
+      const { position, color } = action
+      const current = state.leads[position]
+      const leads = { ...state.leads, [position]: current === color ? null : color }
+      const limbJust = limbLeadsConnected(leads) && !limbLeadsConnected(state.leads)
+      const preJust = precordialConnected(leads) && !precordialConnected(state.leads)
+      return {
+        ...state,
+        leads,
+        eventLog: limbJust
+          ? logEvent(state, { type: 'leads', label: 'Limb leads', detail: 'connected' })
+          : preJust
+            ? logEvent(state, { type: 'leads', label: 'Chest leads (V1–V6)', detail: 'connected' })
+            : state.eventLog,
+      }
+    }
+
+    case 'RESET_LEADS':
+      return { ...state, leads: { ...EMPTY_LEADS } }
+
+    case 'SET_STEMI_TERRITORY': {
+      const territory = action.territory && action.territory !== 'none' ? action.territory : null
+      return {
+        ...state,
+        stemiTerritory: territory,
+        eventLog: logEvent(state, { type: 'stemi', label: 'STEMI territory', detail: territory || 'none' }),
+      }
+    }
+
     case 'SET_CAPTURE_THRESHOLD': {
       const captureThreshold = Math.max(0, Math.min(200, Number(action.threshold)))
       return { ...state, pacer: { ...state.pacer, captureThreshold } }
@@ -319,16 +360,25 @@ function reducer(state, action) {
         scenarioDescription: null,
       }
 
-    case 'LOAD_SCENARIO':
+    case 'LOAD_SCENARIO': {
+      // PALS scenarios carry a Broselow zone so the child's size drives
+      // weight-based vitals thresholds, dosing, and defib energy. Apply it (and
+      // the zone's default defib energy) on load; adult scenarios leave the zone
+      // untouched.
+      const zone = action.scenario.broselowZone || null
       return {
         ...state,
+        broselowZone: zone ?? state.broselowZone,
+        stemiTerritory: action.scenario.stemiTerritory ?? null,
         currentRhythm: action.scenario.rhythm,
         vitals: { ...state.vitals, ...action.scenario.vitals },
         vitalsHidden: action.scenario.vitalsHidden ?? false,
         labelHidden: true,
         scenarioName: action.scenario.name,
         scenarioDescription: action.scenario.description || null,
-        defib: { ...initialState.defib },
+        defib: zone
+          ? { ...initialState.defib, energy: getZone(zone).defibJoules.initial }
+          : { ...initialState.defib },
         pacer: { ...initialState.pacer, captureThreshold: action.scenario.captureThreshold ?? 60 },
         cpr: { ...initialState.cpr },
         reversibleCauses: action.scenario.reversibleCauses ?? [],
@@ -340,6 +390,7 @@ function reducer(state, action) {
         eventLog: [{ time: Date.now(), type: 'scenario', label: 'Scenario loaded', detail: action.scenario.name }],
         pendingScenarioIntro: { name: action.scenario.name, description: action.scenario.description || '' },
       }
+    }
 
     case 'CONFIRM_SCENARIO_INTRO':
       return {
@@ -365,6 +416,8 @@ function reducer(state, action) {
         broselowZone,
         vitals,
         defib,
+        leads: { ...EMPTY_LEADS }, // new patient — electrodes start off
+        stemiTerritory: null,
         teamMembers: action.teamMembers || [],
         codeStartTime: Date.now(),
         eventLog: logEvent(state, { type: 'code', label: 'Session started' }),

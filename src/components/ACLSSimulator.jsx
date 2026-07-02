@@ -17,6 +17,7 @@ import AlgorithmModal from './AlgorithmModal'
 import SessionsModal from './SessionsModal'
 import GradebookModal from './GradebookModal'
 import ThemeToggle from './ThemeToggle'
+import FeedbackToggle from './FeedbackToggle'
 import { DEFAULT_ZONE, getZone } from '../data/broselowTape'
 
 function HeaderButton({ onClick, children }) {
@@ -101,6 +102,7 @@ export default function ACLSSimulator() {
         </div>
 
         <div className="flex items-center gap-2 order-3">
+          <FeedbackToggle />
           <ThemeToggle />
           {state.powered && (
             <span className="text-xs text-ecg-gray font-mono whitespace-nowrap hidden sm:inline">

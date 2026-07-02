@@ -1,9 +1,17 @@
 // Grouped by AHA ACLS required rhythm categories (Oct 2025 Pre-Course Self-Assessment)
+// plus PALS categories for pediatric mode.
+//
+// Each scenario carries a `mode` of 'ACLS' (adult) or 'PALS' (pediatric); when
+// unset it is treated as 'ACLS'. The simulator shows only the scenarios matching
+// the current training mode. PALS scenarios also carry a `broselowZone` so the
+// patient's size drives weight-based vitals, dosing, and defib energy on load.
 
 export const SCENARIO_GROUPS = [
   { key: 'arrest', label: 'Arrest Rhythms'  },
   { key: 'tachy',  label: 'Tachycardias'    },
   { key: 'brady',  label: 'Bradycardias'    },
+  { key: 'resp',   label: 'Respiratory'     },
+  { key: 'shock',  label: 'Shock'           },
   { key: 'normal', label: 'Normal / Baseline' },
 ]
 
@@ -176,8 +184,225 @@ export const SCENARIOS = [
     name: 'Inferior STEMI — 61yo Male',
     description: 'Crushing chest pain radiating to jaw, diaphoretic. ST elevation in inferior leads.',
     rhythm: 'NSR_STEMI',
+    stemiTerritory: 'inferior',
     captureThreshold: 60,
     vitals: { hr: 78, sbp: 94, dbp: 62, spo2: 95, etco2: 33, temp: 98.4 },
     vitalsHidden: true,
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  PALS — PEDIATRIC SCENARIOS
+  //  Covers the AHA PALS core cases: respiratory distress/failure, the four
+  //  shock states, the pediatric arrhythmias, and cardiac arrest. Each sets a
+  //  Broselow zone so the child's size drives weight-based vitals and dosing.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ── PALS · ARREST ───────────────────────────────────────────────────────────
+  {
+    id: 'peds_vf_arrest',
+    mode: 'PALS',
+    group: 'arrest',
+    broselowZone: 'yellow',
+    name: 'Pediatric VF Arrest — 3yo',
+    description: 'Sudden collapse, pulseless and apneic. Coarse ventricular fibrillation — start high-quality CPR and prepare to defibrillate (2 J/kg).',
+    rhythm: 'VFIB',
+    captureThreshold: 999,
+    vitals: { hr: 0, sbp: 0, dbp: 0, spo2: 0, etco2: 12, temp: 98.6 },
+    vitalsHidden: false,
+  },
+  {
+    id: 'peds_asystole_infant',
+    mode: 'PALS',
+    group: 'arrest',
+    broselowZone: 'red',
+    name: 'Infant Asystole — 9mo',
+    description: 'Unresponsive infant, apneic and pulseless after prolonged respiratory failure. Flatline on the monitor — CPR and epinephrine, search the H’s and T’s.',
+    rhythm: 'ASYSTOLE',
+    captureThreshold: 999,
+    vitals: { hr: 0, sbp: 0, dbp: 0, spo2: 0, etco2: 6, temp: 97.4 },
+    vitalsHidden: false,
+    reversibleCauses: ['hypoxia'],
+  },
+  {
+    id: 'peds_pea_hypovolemic',
+    mode: 'PALS',
+    group: 'arrest',
+    broselowZone: 'purple',
+    name: 'Pediatric PEA — 18mo',
+    description: 'Found unresponsive after days of vomiting and diarrhea. Organized rhythm, no pulse — think hypovolemia. CPR plus rapid IV/IO fluid bolus.',
+    rhythm: 'PEA',
+    captureThreshold: 999,
+    vitals: { hr: 70, sbp: 0, dbp: 0, spo2: 0, etco2: 9, temp: 97.2 },
+    vitalsHidden: false,
+    reversibleCauses: ['hypovolemia', 'hydrogen'],
+  },
+  {
+    id: 'peds_pulseless_vt',
+    mode: 'PALS',
+    group: 'arrest',
+    broselowZone: 'green',
+    name: 'Pediatric Pulseless VT — 11yo',
+    description: 'Collapse during sports. Wide-complex tachycardia with no pulse — treat as a shockable arrest (CPR, defibrillate 2 J/kg, epinephrine, amiodarone).',
+    rhythm: 'VTACH',
+    captureThreshold: 999,
+    vitals: { hr: 190, sbp: 0, dbp: 0, spo2: 0, etco2: 12, temp: 98.6 },
+    vitalsHidden: false,
+  },
+
+  // ── PALS · TACHYCARDIAS ──────────────────────────────────────────────────────
+  {
+    id: 'peds_svt_infant',
+    mode: 'PALS',
+    group: 'tachy',
+    broselowZone: 'pink',
+    name: 'Infant SVT — 4mo',
+    description: 'Poor feeding and irritability. Narrow-complex tachycardia ~280 with no beat-to-beat variability. Try vagal (ice to face); if IV access, adenosine.',
+    rhythm: 'PEDIATRIC_SVT',
+    captureThreshold: 60,
+    vitals: { hr: 280, sbp: 68, dbp: 42, spo2: 92, etco2: 33, temp: 98.6 },
+    vitalsHidden: true,
+  },
+  {
+    id: 'peds_svt_unstable',
+    mode: 'PALS',
+    group: 'tachy',
+    broselowZone: 'white',
+    name: 'Unstable SVT — 5yo',
+    description: 'Sudden palpitations, now lethargic and poorly perfused. HR 220, hypotensive — synchronized cardioversion (0.5–1 J/kg).',
+    rhythm: 'SVT',
+    captureThreshold: 60,
+    vitals: { hr: 220, sbp: 76, dbp: 44, spo2: 93, etco2: 31, temp: 98.6 },
+    vitalsHidden: true,
+  },
+  {
+    id: 'peds_vt_pulse',
+    mode: 'PALS',
+    group: 'tachy',
+    broselowZone: 'blue',
+    name: 'Pediatric VT with Pulse — 7yo',
+    description: 'Palpitations and chest pain. Wide-complex monomorphic VT with a pulse and adequate perfusion — expert consult, consider adenosine vs amiodarone/procainamide.',
+    rhythm: 'VTACH',
+    captureThreshold: 60,
+    vitals: { hr: 190, sbp: 92, dbp: 58, spo2: 94, etco2: 32, temp: 98.6 },
+    vitalsHidden: true,
+  },
+
+  // ── PALS · BRADYCARDIAS ──────────────────────────────────────────────────────
+  {
+    id: 'peds_hypoxic_brady',
+    mode: 'PALS',
+    group: 'brady',
+    broselowZone: 'red',
+    name: 'Hypoxic Bradycardia — 8mo',
+    description: 'Worsening respiratory failure, now bradycardic and mottled. HR 48 with hypoxia — oxygenate and ventilate first; epinephrine if HR stays <60 with poor perfusion despite ventilation.',
+    rhythm: 'SINUS_BRADY',
+    captureThreshold: 60,
+    vitals: { hr: 48, sbp: 70, dbp: 40, spo2: 78, etco2: 30, temp: 98.2 },
+    vitalsHidden: true,
+    reversibleCauses: ['hypoxia'],
+  },
+  {
+    id: 'peds_complete_block',
+    mode: 'PALS',
+    group: 'brady',
+    broselowZone: 'green',
+    name: 'Complete Heart Block — 12yo',
+    description: 'Congenital complete AV block with syncope. AV dissociation, ventricular escape ~40, hypotensive — atropine/epinephrine and prepare pacing, expert consult.',
+    rhythm: 'THIRD_DEGREE',
+    captureThreshold: 40,
+    vitals: { hr: 40, sbp: 80, dbp: 50, spo2: 93, etco2: 30, temp: 98.6 },
+    vitalsHidden: true,
+  },
+
+  // ── PALS · RESPIRATORY ───────────────────────────────────────────────────────
+  {
+    id: 'peds_croup',
+    mode: 'PALS',
+    group: 'resp',
+    broselowZone: 'purple',
+    name: 'Croup — 2yo',
+    description: 'Barky cough with inspiratory stridor at rest and mild retractions. Upper-airway obstruction — humidified O₂, nebulized epinephrine, dexamethasone.',
+    rhythm: 'SINUS_TACH',
+    captureThreshold: 60,
+    vitals: { hr: 150, sbp: 95, dbp: 58, spo2: 91, etco2: 34, temp: 100.4 },
+    vitalsHidden: true,
+  },
+  {
+    id: 'peds_asthma',
+    mode: 'PALS',
+    group: 'resp',
+    broselowZone: 'white',
+    name: 'Status Asthmaticus — 5yo',
+    description: 'Severe wheezing, accessory-muscle use and poor air movement. Lower-airway obstruction — O₂, albuterol/ipratropium, steroids, consider magnesium.',
+    rhythm: 'SINUS_TACH',
+    captureThreshold: 60,
+    vitals: { hr: 140, sbp: 100, dbp: 62, spo2: 88, etco2: 45, temp: 98.6 },
+    vitalsHidden: true,
+  },
+  {
+    id: 'peds_bronchiolitis',
+    mode: 'PALS',
+    group: 'resp',
+    broselowZone: 'red',
+    name: 'Bronchiolitis — 7mo',
+    description: 'RSV season: tachypnea, wheezes and crackles, nasal flaring and hypoxemia. Suction, O₂/HFNC, close monitoring for fatigue.',
+    rhythm: 'SINUS_TACH',
+    captureThreshold: 60,
+    vitals: { hr: 170, sbp: 84, dbp: 52, spo2: 89, etco2: 38, temp: 100.8 },
+    vitalsHidden: true,
+  },
+  {
+    id: 'peds_anaphylaxis',
+    mode: 'PALS',
+    group: 'resp',
+    broselowZone: 'yellow',
+    name: 'Anaphylaxis — 3yo',
+    description: 'Hives, stridor and wheeze after a peanut exposure, now becoming hypotensive. Give IM epinephrine promptly, O₂, fluids, adjuncts.',
+    rhythm: 'SINUS_TACH',
+    captureThreshold: 60,
+    vitals: { hr: 160, sbp: 78, dbp: 44, spo2: 90, etco2: 32, temp: 98.6 },
+    vitalsHidden: true,
+  },
+
+  // ── PALS · SHOCK ─────────────────────────────────────────────────────────────
+  {
+    id: 'peds_septic_shock',
+    mode: 'PALS',
+    group: 'shock',
+    broselowZone: 'white',
+    name: 'Septic Shock — 5yo',
+    description: 'Fever with mottled cool extremities and delayed capillary refill. Distributive/septic shock — early IV/IO fluids, antibiotics, reassess; vasoactive if fluid-refractory.',
+    rhythm: 'SINUS_TACH',
+    captureThreshold: 60,
+    vitals: { hr: 170, sbp: 80, dbp: 40, spo2: 93, etco2: 30, temp: 103.1 },
+    vitalsHidden: true,
+    reversibleCauses: ['hypovolemia', 'hydrogen'],
+  },
+  {
+    id: 'peds_hypovolemic_shock',
+    mode: 'PALS',
+    group: 'shock',
+    broselowZone: 'purple',
+    name: 'Hypovolemic Shock — 18mo',
+    description: 'Days of vomiting and diarrhea with sunken eyes and dry mucous membranes. Tachycardic and poorly perfused — rapid 20 mL/kg isotonic boluses, reassess.',
+    rhythm: 'SINUS_TACH',
+    captureThreshold: 60,
+    vitals: { hr: 175, sbp: 82, dbp: 46, spo2: 96, etco2: 30, temp: 98.6 },
+    vitalsHidden: true,
+    reversibleCauses: ['hypovolemia', 'hydrogen'],
+  },
+
+  // ── PALS · NORMAL / BASELINE ─────────────────────────────────────────────────
+  {
+    id: 'peds_nsr_baseline',
+    mode: 'PALS',
+    group: 'normal',
+    broselowZone: 'yellow',
+    name: 'Pediatric NSR Baseline — 3yo',
+    description: 'Post-arrest monitoring. Stable child with an age-appropriate rate and good perfusion.',
+    rhythm: 'NSR',
+    captureThreshold: 60,
+    vitals: { hr: 110, sbp: 95, dbp: 60, spo2: 98, etco2: 36, temp: 98.6 },
+    vitalsHidden: false,
   },
 ]

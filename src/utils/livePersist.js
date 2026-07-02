@@ -19,6 +19,7 @@ export function loadLiveState(initialState) {
       vitals:      { ...initialState.vitals, ...saved.vitals },
       defib:       { ...initialState.defib,  ...saved.defib, charging: false, charged: false },
       pacer:       { ...initialState.pacer,  ...saved.pacer },
+      leads:       { ...initialState.leads,  ...saved.leads },
       cpr:         { ...initialState.cpr,    ...saved.cpr },
       teamMembers: saved.teamMembers ?? [],
       instructorOpen: false,

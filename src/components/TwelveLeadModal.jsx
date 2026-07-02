@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
-import { getLeadProfiles } from '../data/leadProfiles'
+import { getLeadProfiles, STEMI_TERRITORY_LIST } from '../data/leadProfiles'
 import { RHYTHMS } from '../data/rhythms'
+import StemiTerritoryToggle from './StemiTerritoryToggle'
 
 const ROWS = [
   ['I',   'aVR', 'V1', 'V4'],
@@ -106,8 +107,10 @@ function RhythmStrip({ profile }) {
 
 export default function TwelveLeadModal({ onClose }) {
   const { state } = useSimulator()
+  const [showTerritory, setShowTerritory] = useState(false)
   const rhythm = RHYTHMS[state.currentRhythm]
-  const profiles = getLeadProfiles(state.currentRhythm, state.scenarioName)
+  const profiles = getLeadProfiles(state.currentRhythm, state.scenarioName, state.stemiTerritory)
+  const territory = STEMI_TERRITORY_LIST.find(t => t.key === state.stemiTerritory)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -123,13 +126,35 @@ export default function TwelveLeadModal({ onClose }) {
             </h2>
             <p className="text-[10px] text-ecg-gray font-mono">
               {state.scenarioName || state.currentRhythm}
+              {territory && (
+                <span className="ml-2 text-ecg-red font-bold">— {territory.label} STEMI ({territory.leads})</span>
+              )}
               {rhythm && !rhythm.pulse && (
                 <span className="ml-2 text-ecg-red font-bold">— NO PULSE RHYTHM</span>
               )}
             </p>
           </div>
-          <button onClick={onClose} className="text-ecg-gray hover:text-white text-xl leading-none">×</button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowTerritory(s => !s)}
+              className={`text-[10px] font-bold font-mono px-2 py-1 rounded border uppercase tracking-widest transition-colors ${
+                showTerritory || territory
+                  ? 'border-ecg-red text-ecg-red'
+                  : 'border-ecg-border text-ecg-gray hover:text-white hover:border-ecg-gray'
+              }`}
+            >
+              STEMI ▾
+            </button>
+            <button onClick={onClose} className="text-ecg-gray hover:text-white text-xl leading-none">×</button>
+          </div>
         </div>
+
+        {showTerritory && (
+          <div className="mb-2 p-2 rounded border border-ecg-border/50 bg-black/20">
+            <div className="text-[9px] text-ecg-gray font-mono uppercase tracking-widest mb-1.5">STEMI Territory — toggle to localize the injury</div>
+            <StemiTerritoryToggle />
+          </div>
+        )}
 
         <div className="grid grid-cols-4 gap-1">
           {ROWS.flatMap(row =>
