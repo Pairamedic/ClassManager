@@ -5,6 +5,7 @@ import EtCO2Waveform from './EtCO2Waveform'
 import VitalsDisplay from './VitalsDisplay'
 import TwelveLeadModal from './TwelveLeadModal'
 import BroselowTapeModal from './BroselowTapeModal'
+import LeadsModal from './LeadsModal'
 import { RHYTHMS } from '../data/rhythms'
 import { getZone, DEFAULT_ZONE } from '../data/broselowTape'
 import { limbLeadsConnected, twelveLeadConnected } from '../data/leads'
@@ -14,6 +15,7 @@ export default function MonitorScreen() {
   const rhythm = RHYTHMS[state.currentRhythm] || RHYTHMS.NSR
   const [show12Lead, setShow12Lead] = useState(false)
   const [showBroselow, setShowBroselow] = useState(false)
+  const [showLeadsModal, setShowLeadsModal] = useState(false)
   const isPals = state.mode === 'PALS'
   const zone = isPals ? getZone(state.broselowZone || DEFAULT_ZONE) : null
 
@@ -23,6 +25,14 @@ export default function MonitorScreen() {
   const limbOn = limbLeadsConnected(state.leads)
   const hasTrace = limbOn || state.defib.padsConnected
   const twelveReady = twelveLeadConnected(state.leads) // limb + all six chest leads
+
+  // The 12-LEAD button is the main entry point for hooking up leads — the
+  // small CONNECT LEADS button lives in the pacer sidebar and can get clipped
+  // on narrower screens, so route here instead of just disabling the button.
+  function open12Lead() {
+    if (twelveReady) setShow12Lead(true)
+    else setShowLeadsModal(true)
+  }
 
   const categoryColors = {
     normal:  'text-ecg-green',
@@ -64,13 +74,12 @@ export default function MonitorScreen() {
             </button>
           )}
           <button
-            onClick={() => twelveReady && setShow12Lead(true)}
-            disabled={!twelveReady}
+            onClick={open12Lead}
             title={twelveReady ? '' : limbOn ? 'Place chest leads V1–V6' : 'Connect limb leads first'}
             className={`text-[10px] font-bold font-mono px-2.5 py-1 rounded border uppercase tracking-widest transition-colors ${
               twelveReady
                 ? 'border-ecg-border text-ecg-gray hover:text-ecg-green hover:border-ecg-green'
-                : 'border-ecg-border/50 text-ecg-border cursor-not-allowed'
+                : 'border-ecg-amber/60 text-ecg-amber hover:border-ecg-amber hover:text-ecg-amber'
             }`}
           >
             12-LEAD
@@ -99,6 +108,17 @@ export default function MonitorScreen() {
 
       {show12Lead && <TwelveLeadModal onClose={() => setShow12Lead(false)} />}
       {showBroselow && <BroselowTapeModal onClose={() => setShowBroselow(false)} />}
+      {showLeadsModal && (
+        <LeadsModal
+          initialTab={limbOn ? 'chest' : 'limb'}
+          onClose={() => {
+            setShowLeadsModal(false)
+            // Leads just finished connecting — go straight into the 12-lead
+            // view instead of making the learner click the button again.
+            if (twelveLeadConnected(state.leads)) setShow12Lead(true)
+          }}
+        />
+      )}
     </div>
   )
 }

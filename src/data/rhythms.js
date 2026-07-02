@@ -83,7 +83,7 @@ export const RHYTHMS = {
     rate: 75, rateVariability: 0.04,
     type: 'cycle', shockable: false, pulse: true, category: 'normal',
     captureThreshold: 60,
-    waveform: (x) => pqrst(x),
+    waveform: (x, _t, _beatNum, stOffset = 0) => pqrst(x, { stElev: stOffset }),
   },
 
   NSR_PVCS: {
@@ -92,10 +92,10 @@ export const RHYTHMS = {
     type: 'pattern', patternLen: 5,
     shockable: false, pulse: true, category: 'normal',
     captureThreshold: 60,
-    waveform: (x, _t, beatNum) =>
+    waveform: (x, _t, beatNum, stOffset = 0) =>
       beatNum % 5 === 4
         ? wideQRS(x, { amp: 0.90, startX: 0.05 })
-        : pqrst(x),
+        : pqrst(x, { stElev: stOffset }),
   },
 
   NSR_PACS: {
@@ -104,10 +104,10 @@ export const RHYTHMS = {
     type: 'pattern', patternLen: 6,
     shockable: false, pulse: true, category: 'normal',
     captureThreshold: 60,
-    waveform: (x, _t, beatNum) =>
+    waveform: (x, _t, beatNum, stOffset = 0) =>
       beatNum % 6 === 5
-        ? pqrst(x, { pAmp: 0.22, pS: 0.02, pE: 0.11, prE: 0.21 })
-        : pqrst(x),
+        ? pqrst(x, { pAmp: 0.22, pS: 0.02, pE: 0.11, prE: 0.21, stElev: stOffset })
+        : pqrst(x, { stElev: stOffset }),
   },
 
   NSR_STEMI: {
@@ -115,7 +115,7 @@ export const RHYTHMS = {
     rate: 78, rateVariability: 0.03,
     type: 'cycle', shockable: false, pulse: true, category: 'normal',
     captureThreshold: 60,
-    waveform: (x) => pqrst(x, { stElev: 0.30, stLen: 0.12, tAmp: 0.35, tLen: 0.18 }),
+    waveform: (x, _t, _beatNum, stOffset = 0) => pqrst(x, { stElev: 0.30 + stOffset, stLen: 0.12, tAmp: 0.35, tLen: 0.18 }),
   },
 
   NSR_ST_DEP: {
@@ -123,7 +123,7 @@ export const RHYTHMS = {
     rate: 75, rateVariability: 0.03,
     type: 'cycle', shockable: false, pulse: true, category: 'normal',
     captureThreshold: 60,
-    waveform: (x) => pqrst(x, { stElev: -0.18, stLen: 0.12, tInv: true, tAmp: 0.15 }),
+    waveform: (x, _t, _beatNum, stOffset = 0) => pqrst(x, { stElev: -0.18 + stOffset, stLen: 0.12, tInv: true, tAmp: 0.15 }),
   },
 
   // ── BRADY / PACING ──────────────────────────────────────────────────────────
@@ -133,7 +133,7 @@ export const RHYTHMS = {
     rate: 45, rateVariability: 0.05,
     type: 'cycle', shockable: false, pulse: true, category: 'brady',
     captureThreshold: 60,
-    waveform: (x) => pqrst(x),
+    waveform: (x, _t, _beatNum, stOffset = 0) => pqrst(x, { stElev: stOffset }),
   },
 
   FIRST_DEGREE: {
@@ -142,7 +142,7 @@ export const RHYTHMS = {
     type: 'cycle', shockable: false, pulse: true, category: 'brady',
     captureThreshold: 60,
     // Long PR: prE pushed to 0.38 (~0.28s at 65bpm)
-    waveform: (x) => pqrst(x, { prE: 0.38 }),
+    waveform: (x, _t, _beatNum, stOffset = 0) => pqrst(x, { prE: 0.38, stElev: stOffset }),
   },
 
   WENCKEBACH: {
@@ -152,7 +152,7 @@ export const RHYTHMS = {
     shockable: false, pulse: true, category: 'brady',
     captureThreshold: 60,
     // Beats 0-2: QRS with progressively longer PR; beat 3: P only (dropped)
-    waveform: (x, _t, beatNum) => {
+    waveform: (x, _t, beatNum, stOffset = 0) => {
       const n = beatNum % 4
       if (n === 3) {
         // Dropped beat — P wave only
@@ -161,7 +161,7 @@ export const RHYTHMS = {
           : 0
       }
       const prEnds = [0.26, 0.33, 0.40]
-      return pqrst(x, { prE: prEnds[n] })
+      return pqrst(x, { prE: prEnds[n], stElev: stOffset })
     },
   },
 
@@ -172,13 +172,13 @@ export const RHYTHMS = {
     shockable: false, pulse: true, category: 'brady',
     captureThreshold: 60,
     // 3:2 — beats 0,1: QRS with constant PR; beat 2: P only
-    waveform: (x, _t, beatNum) => {
+    waveform: (x, _t, beatNum, stOffset = 0) => {
       if (beatNum % 3 === 2) {
         return x >= 0.05 && x < 0.15
           ? 0.15 * Math.sin((x - 0.05) / 0.10 * Math.PI)
           : 0
       }
-      return pqrst(x)
+      return pqrst(x, { stElev: stOffset })
     },
   },
 
@@ -198,12 +198,12 @@ export const RHYTHMS = {
     rate: 50, rateVariability: 0.03,
     type: 'cycle', shockable: false, pulse: true, category: 'brady',
     captureThreshold: 60,
-    waveform: (x) => {
+    waveform: (x, _t, _beatNum, stOffset = 0) => {
       // Inverted P just before QRS
       const invP = x >= 0.17 && x < 0.25
         ? -0.09 * Math.sin((x - 0.17) / 0.08 * Math.PI)
         : 0
-      return invP + pqrst(x, { pAmp: 0, prE: 0.25 })
+      return invP + pqrst(x, { pAmp: 0, prE: 0.25, stElev: stOffset })
     },
   },
 
@@ -222,7 +222,7 @@ export const RHYTHMS = {
     rate: 128, rateVariability: 0.03,
     type: 'cycle', shockable: false, pulse: true, category: 'tachy',
     captureThreshold: 60,
-    waveform: (x) => pqrst(x, { stLen: 0.06, tLen: 0.14 }),
+    waveform: (x, _t, _beatNum, stOffset = 0) => pqrst(x, { stLen: 0.06, tLen: 0.14, stElev: stOffset }),
   },
 
   SINUS_TACH_STEMI: {
@@ -230,7 +230,7 @@ export const RHYTHMS = {
     rate: 122, rateVariability: 0.03,
     type: 'cycle', shockable: false, pulse: true, category: 'tachy',
     captureThreshold: 60,
-    waveform: (x) => pqrst(x, { stElev: 0.30, stLen: 0.07, tLen: 0.13, tAmp: 0.32 }),
+    waveform: (x, _t, _beatNum, stOffset = 0) => pqrst(x, { stElev: 0.30 + stOffset, stLen: 0.07, tLen: 0.13, tAmp: 0.32 }),
   },
 
   SVT: {
@@ -238,8 +238,8 @@ export const RHYTHMS = {
     rate: 188, rateVariability: 0.01,
     type: 'cycle', shockable: false, pulse: true, category: 'tachy',
     captureThreshold: 60,
-    waveform: (x) => {
-      const qrs = pqrst(x, { pAmp: 0, prE: 0.05, stLen: 0.05, tLen: 0.12 })
+    waveform: (x, _t, _beatNum, stOffset = 0) => {
+      const qrs = pqrst(x, { pAmp: 0, prE: 0.05, stLen: 0.05, tLen: 0.12, stElev: stOffset })
       // Retrograde P buried in end of T wave
       const retroP = x > 0.32 && x < 0.40
         ? -0.08 * Math.sin((x - 0.32) / 0.08 * Math.PI)
@@ -253,11 +253,11 @@ export const RHYTHMS = {
     rate: 108, rateVariability: 0.38,
     type: 'irregular', shockable: false, pulse: true, category: 'tachy',
     captureThreshold: 60,
-    waveform: (x, t) => {
+    waveform: (x, t, _beatNum, stOffset = 0) => {
       const fib = 0.045 * Math.sin(t * 0.19 + x * 41)
                 + 0.030 * Math.sin(t * 0.13 + x * 67)
                 + 0.020 * Math.sin(t * 0.31 + x * 23)
-      return fib + pqrst(x, { pAmp: 0, prE: 0.08, stLen: 0.08, tLen: 0.15 })
+      return fib + pqrst(x, { pAmp: 0, prE: 0.08, stLen: 0.08, tLen: 0.15, stElev: stOffset })
     },
   },
 
@@ -266,11 +266,11 @@ export const RHYTHMS = {
     rate: 150, rateVariability: 0.01,
     type: 'cycle', shockable: false, pulse: true, category: 'tachy',
     captureThreshold: 60,
-    waveform: (x) => {
+    waveform: (x, _t, _beatNum, stOffset = 0) => {
       // 2:1 flutter: 2 sawtooth waves per QRS
       const halfX = (x * 2) % 1
       const flutter = x > 0.22 ? 0.12 * (1 - 2 * halfX) : 0  // sawtooth, suppressed near QRS
-      const qrs = pqrst(x, { pAmp: 0, prE: 0.05, stLen: 0.04, tLen: 0.10 })
+      const qrs = pqrst(x, { pAmp: 0, prE: 0.05, stLen: 0.04, tLen: 0.10, stElev: stOffset })
       return flutter + qrs
     },
   },
@@ -300,8 +300,8 @@ export const RHYTHMS = {
     rate: 258, rateVariability: 0.01,
     type: 'cycle', shockable: false, pulse: true, category: 'tachy',
     captureThreshold: 60,
-    waveform: (x) =>
-      pqrst(x, { pAmp: 0, prE: 0.05, stLen: 0.03, tLen: 0.09, tAmp: 0.18 }),
+    waveform: (x, _t, _beatNum, stOffset = 0) =>
+      pqrst(x, { pAmp: 0, prE: 0.05, stLen: 0.03, tLen: 0.09, tAmp: 0.18, stElev: stOffset }),
   },
 
   VTACH: {
@@ -354,7 +354,7 @@ export const RHYTHMS = {
     rate: 70, rateVariability: 0.05,
     type: 'cycle', shockable: false, pulse: false, category: 'noshock',
     captureThreshold: 999,
-    waveform: (x) => pqrst(x),
+    waveform: (x, _t, _beatNum, stOffset = 0) => pqrst(x, { stElev: stOffset }),
   },
 
   AGONAL: {

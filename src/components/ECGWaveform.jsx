@@ -1,12 +1,19 @@
 import { useRef, useEffect, useState } from 'react'
 import { useSimulator } from '../context/SimulatorContext'
 import { useECGCanvas } from '../hooks/useECGCanvas'
+import { getLeadProfiles } from '../data/leadProfiles'
 
 export default function ECGWaveform() {
   const { state } = useSimulator()
   const containerRef = useRef(null)
   const canvasRef    = useRef(null)
   const [dims, setDims] = useState({ width: 0, height: 0, dpr: 1 })
+
+  // Lead II is what the main strip shows, so pull its ST offset from whatever
+  // STEMI territory (or legacy scenario override) is active — the same source
+  // the 12-lead modal reads — so picking a territory shows up here too.
+  const leadIIProfile = getLeadProfiles(state.currentRhythm, state.scenarioName, state.stemiTerritory)['II']
+  const stOffset = (leadIIProfile.st || 0) / 6 * 0.4
 
   // Size the backing store to physical pixels from committed layout, and only
   // publish real (non-zero) sizes so the very first draw is crisp at full DPR.
@@ -43,6 +50,7 @@ export default function ECGWaveform() {
     isRunning:        state.isRunning,
     syncMode:         state.defib.syncMode,
     hr:               state.vitals.hr,
+    stOffset,
     width:            dims.width,
     height:           dims.height,
     dpr:              dims.dpr,

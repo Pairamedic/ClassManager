@@ -121,7 +121,7 @@ export function useECGCanvas(canvasRef, rhythmId, options = {}) {
       }
 
       const x = Math.max(0, Math.min(0.9999, (t - s.beatStart) / s.beatLen))
-      return rhythm.waveform(x, t, s.beatNum)
+      return rhythm.waveform(x, t, s.beatNum, optsRef.current.stOffset || 0)
     }
 
     function getY(t) {
