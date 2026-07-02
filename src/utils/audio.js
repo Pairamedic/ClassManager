@@ -70,6 +70,12 @@ export function playPacingClick() {
   beep(1200, 0.03, 'square', 0.12)
 }
 
+// Very short, quiet click for UI button presses — the cross-platform companion
+// to haptics (iOS has no vibration API), so every tap gives *some* feedback.
+export function playUITick() {
+  beep(2000, 0.012, 'square', 0.04)
+}
+
 // CPR metronome tick. accent=true marks the downbeat of a cycle.
 export function playMetronomeClick(accent = false) {
   beep(accent ? 1500 : 1000, 0.035, 'square', accent ? 0.22 : 0.16)

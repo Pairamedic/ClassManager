@@ -1,16 +1,27 @@
 import { useSimulator } from '../context/SimulatorContext'
 import { RHYTHMS } from '../data/rhythms'
 import { resumeAudio } from '../utils/audio'
+import { feedbackTap, feedbackBump } from '../utils/feedback'
+import { limbLeadsConnected } from '../data/leads'
+import LeadsControl from './LeadsControl'
 
 export default function PacerPanel() {
   const { state, dispatch } = useSimulator()
   const { pacer, currentRhythm, defib } = state
   const rhythm  = RHYTHMS[currentRhythm] || RHYTHMS.NSR
   const captured = pacer.active && pacer.output >= pacer.captureThreshold
-  const canPace  = defib.padsConnected || pacer.active  // PAM: pads required before pacing unlocks
+  // Pacing needs both the defib pads and the ECG limb leads (electrodes) placed.
+  const limbOn   = limbLeadsConnected(state.leads)
+  const canPace  = (defib.padsConnected && limbOn) || pacer.active
+
+  const paceHint = !defib.padsConnected && !limbOn ? 'Connect electrodes and pads to pace'
+    : !limbOn ? 'Connect limb leads to pace'
+    : !defib.padsConnected ? 'Connect pads to pace'
+    : null
 
   function step(field, action, delta) {
     resumeAudio()
+    feedbackTap()
     dispatch({ type: action, [field]: state.pacer[field] + delta })
   }
 
@@ -71,9 +82,9 @@ export default function PacerPanel() {
         Threshold: {pacer.captureThreshold} mA
       </div>
 
-      {/* PACE button — requires pads connected (PAM Requirement 2) */}
+      {/* PACE button — requires pads + limb leads connected (PAM Requirement 2) */}
       <button
-        onClick={() => { if (canPace) { resumeAudio(); dispatch({ type: 'TOGGLE_PACER' }) } }}
+        onClick={() => { if (canPace) { resumeAudio(); feedbackBump(); dispatch({ type: 'TOGGLE_PACER' }) } }}
         disabled={!canPace}
         className={`w-full min-h-[44px] rounded font-bold text-sm tracking-widest uppercase border-2 transition-all active:scale-95 ${
           pacer.active
@@ -85,9 +96,12 @@ export default function PacerPanel() {
       >
         {pacer.active ? '■ STOP PACING' : '▶ PACE'}
       </button>
-      {!canPace && (
-        <div className="text-[9px] text-ecg-amber font-mono text-center">Connect pads to pace</div>
+      {paceHint && (
+        <div className="text-[9px] text-ecg-amber font-mono text-center">{paceHint}</div>
       )}
+
+      {/* ECG limb-lead placement — a new patient starts with no electrodes */}
+      <LeadsControl />
     </div>
   )
 }

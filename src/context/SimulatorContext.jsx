@@ -3,6 +3,7 @@ import { RHYTHMS } from '../data/rhythms'
 import { loadLiveState, saveLiveState } from '../utils/livePersist'
 import { getPediatricVitals } from '../data/pediatricVitals'
 import { DEFAULT_ZONE, getZone } from '../data/broselowTape'
+import { EMPTY_LEADS, limbLeadsConnected } from '../data/leads'
 
 const Ctx = createContext(null)
 
@@ -35,6 +36,11 @@ export const initialState = {
     output: 50,
     captureThreshold: 60,
   },
+
+  // ECG limb electrodes the learner places on the patient (color per limb, or
+  // null). The monitor shows LEAD FAULT until these are correct or defib pads
+  // are connected. See src/data/leads.js.
+  leads: { ...EMPTY_LEADS },
 
   cpr: {
     active: false,
@@ -199,6 +205,25 @@ function reducer(state, action) {
       const output = Math.max(0, Math.min(200, action.output))
       return { ...state, pacer: { ...state.pacer, output } }
     }
+
+    case 'PLACE_ELECTRODE': {
+      // Assign a colored electrode to a limb (or clear it if the same color is
+      // tapped again). Log the moment all four snap into the correct spots.
+      const { position, color } = action
+      const current = state.leads[position]
+      const leads = { ...state.leads, [position]: current === color ? null : color }
+      const justConnected = limbLeadsConnected(leads) && !limbLeadsConnected(state.leads)
+      return {
+        ...state,
+        leads,
+        eventLog: justConnected
+          ? logEvent(state, { type: 'leads', label: 'Limb leads', detail: 'connected' })
+          : state.eventLog,
+      }
+    }
+
+    case 'RESET_LEADS':
+      return { ...state, leads: { ...EMPTY_LEADS } }
 
     case 'SET_CAPTURE_THRESHOLD': {
       const captureThreshold = Math.max(0, Math.min(200, Number(action.threshold)))
@@ -374,6 +399,7 @@ function reducer(state, action) {
         broselowZone,
         vitals,
         defib,
+        leads: { ...EMPTY_LEADS }, // new patient — electrodes start off
         teamMembers: action.teamMembers || [],
         codeStartTime: Date.now(),
         eventLog: logEvent(state, { type: 'code', label: 'Session started' }),
