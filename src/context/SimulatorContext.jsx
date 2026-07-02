@@ -14,6 +14,10 @@ export const initialState = {
   currentRhythm: 'NSR',
   isRunning: true,
 
+  // STEMI localization shown on the 12-lead (null = no injury pattern). See
+  // STEMI_TERRITORIES in src/data/leadProfiles.js.
+  stemiTerritory: null,
+
   vitals: { hr: 72, sbp: 120, dbp: 80, spo2: 98, etco2: 35, temp: 98.6 },
   vitalsHidden: false,
   labelHidden: true,
@@ -228,6 +232,15 @@ function reducer(state, action) {
     case 'RESET_LEADS':
       return { ...state, leads: { ...EMPTY_LEADS } }
 
+    case 'SET_STEMI_TERRITORY': {
+      const territory = action.territory && action.territory !== 'none' ? action.territory : null
+      return {
+        ...state,
+        stemiTerritory: territory,
+        eventLog: logEvent(state, { type: 'stemi', label: 'STEMI territory', detail: territory || 'none' }),
+      }
+    }
+
     case 'SET_CAPTURE_THRESHOLD': {
       const captureThreshold = Math.max(0, Math.min(200, Number(action.threshold)))
       return { ...state, pacer: { ...state.pacer, captureThreshold } }
@@ -356,6 +369,7 @@ function reducer(state, action) {
       return {
         ...state,
         broselowZone: zone ?? state.broselowZone,
+        stemiTerritory: action.scenario.stemiTerritory ?? null,
         currentRhythm: action.scenario.rhythm,
         vitals: { ...state.vitals, ...action.scenario.vitals },
         vitalsHidden: action.scenario.vitalsHidden ?? false,
@@ -403,6 +417,7 @@ function reducer(state, action) {
         vitals,
         defib,
         leads: { ...EMPTY_LEADS }, // new patient — electrodes start off
+        stemiTerritory: null,
         teamMembers: action.teamMembers || [],
         codeStartTime: Date.now(),
         eventLog: logEvent(state, { type: 'code', label: 'Session started' }),

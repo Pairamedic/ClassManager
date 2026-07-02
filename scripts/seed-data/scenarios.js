@@ -184,6 +184,7 @@ export const SCENARIOS = [
     name: 'Inferior STEMI — 61yo Male',
     description: 'Crushing chest pain radiating to jaw, diaphoretic. ST elevation in inferior leads.',
     rhythm: 'NSR_STEMI',
+    stemiTerritory: 'inferior',
     captureThreshold: 60,
     vitals: { hr: 78, sbp: 94, dbp: 62, spo2: 95, etco2: 33, temp: 98.4 },
     vitalsHidden: true,
